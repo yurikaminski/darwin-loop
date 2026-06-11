@@ -1,15 +1,37 @@
 # Darwin Loop
 
-Plataforma de otimização de agentes baseada em auto-evolução de prompts, fine-tuning via algoritmos genéticos (GePa) e observabilidade via OpenTelemetry. Focada em capacitar Product Managers (PMs) a escalar agentes de IA com qualidade e previsibilidade.
+Darwin Loop is an autonomous optimization platform for AI Agents. It uses a reflective loop of telemetry, genetic mutation (GePa), and A/B testing to evolve agent prompts and weights, continuously improving performance based on custom Product Manager (PM) goals.
 
-## Funcionalidades Principais
-- **Otimização Reflexiva:** Ciclo contínuo de Feedback -> Mutação -> Teste A/B -> Deployment.
-- **Darwin Goals Engine:** Sistema de KPIs para agentes (estilo Google Analytics), permitindo definir metas de performance e qualidade em linguagem natural.
-- **Observabilidade:** Telemetria nativa com OpenTelemetry (OTel).
-- **Privacidade:** PII Scrubbing automático para garantir compliance.
+## The Reflective Optimization Loop
 
-## Estrutura do Projeto
-- `lib/`: SDK do cliente para coleta e gerenciamento de contexto.
-- `backend/`: API (FastAPI) para processamento, armazenamento de versões e experimentos.
-- `tests/`: Suíte de testes automatizados de core e metas.
-- `docs/specs/`: Especificações técnicas dos módulos (ex: Goals Engine).
+Darwin Loop operates on a closed-loop optimization cycle:
+
+1.  **Telemetry Collection [IMPLEMENTED]:** The `darwin-client-lib` captures full interaction context, token usage, latency, and custom events.
+2.  **Goal Evaluation [IN PROGRESS]:** The `Goal Engine` validates interactions against predefined performance KPIs (tokens, message count) and semantic quality goals.
+3.  **Reflection & Analysis:** The system logs interactions and goal attainment scores for analysis.
+4.  **Genetic Mutation (GePa):** (Planned) The GePa engine proposes mutations to prompts or weights based on performance.
+5.  **A/B Testing & Deployment:** (Planned) Optimized versions are deployed and compared against the baseline.
+
+## Architecture
+
+- **`lib/`**: Contains the SDK (`darwin-client-lib`) for telemetry and the `Goal Engine` for KPI evaluation.
+- **`backend/`**: FastAPI-based server for persistence and experiment management.
+- **`tests/`**: Suite of unit and integration tests for core logic and goal validation.
+
+## Status
+
+- [x] SDK Implementation (Telemetry, Context Tracking, Privacy Scrubber)
+- [x] Backend Infrastructure (FastAPI, SQLAlchemy)
+- [x] Goal Engine Logic (Hard Rule Validation)
+- [ ] Genetic Mutation Engine (GePa)
+- [ ] PM Playground Dashboard
+- [ ] Fine-tuning Pipeline Integration
+
+## Getting Started
+
+1. Install the SDK: `pip install darwin-client-lib`
+2. Initialize with your agent: `darwin = DarwinClient(api_key="...")`
+3. Track your goals: Define KPIs based on performance thresholds.
+
+---
+*Built for autonomous AI evolution.*
