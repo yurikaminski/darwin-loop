@@ -1,0 +1,29 @@
+# Darwin Loop — Python dependencies
+# Versions pinned from mcp-server/venv where available (Python 3.11).
+# fastapi / opentelemetry were not present in the committed venv, so they use
+# compatible lower bounds — pin them once a reference environment is settled.
+
+# --- Backend API (backend/app/main.py) ---
+fastapi>=0.115,<1.0
+uvicorn==0.49.0
+sqlalchemy==2.0.50
+pydantic==2.13.4
+
+# --- Telemetry SDK (lib/telemetry, hermes_telemetry.py, experimento_otel.py) ---
+opentelemetry-api>=1.27,<2.0
+opentelemetry-sdk>=1.27,<2.0
+opentelemetry-exporter-otlp-proto-grpc>=1.27,<2.0
+opentelemetry-exporter-otlp-proto-http>=1.27,<2.0
+
+# --- Feedback detection / triage (lib/detection) ---
+spacy==3.8.14
+nltk==3.9.4
+# spaCy English model — not on PyPI; install with:
+#   python -m spacy download en_core_web_sm
+# (pinned reference: en_core_web_sm==3.8.0)
+
+# --- MCP server (mcp-server/src/server.py) ---
+mcp==1.27.2
+
+# --- Tests ---
+pytest>=8.0

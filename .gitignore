@@ -2,4 +2,5 @@ venv/
 __pycache__/
 *.pyc
 .env
-darwin.db
+*.db
+.DS_Store
