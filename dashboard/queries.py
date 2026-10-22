@@ -70,7 +70,8 @@ SELECT user_email, ANY_VALUE(person) AS person, ANY_VALUE(squad) AS squad,
        SUM(cost_usd) AS cost, SUM(useful_cost) AS useful, SUM(friction_cost) AS friction, SUM(cold_excess) AS cold,
        SUM(overhead_cost) AS overhead, SUM(agent_calls) AS agent_calls, SUM(cold_calls) AS cold_calls,
        SUM(lines_added) AS lines_added, SUM(edits_accept) AS edits_accept, SUM(edits_reject) AS edits_reject,
-       SUM(commits) AS commits, SUM(prs) AS prs, LOGICAL_OR(uses_mcp) AS uses_mcp, LOGICAL_OR(uses_auto) AS uses_auto
+       SUM(commits) AS commits, SUM(prs) AS prs, LOGICAL_OR(uses_mcp) AS uses_mcp, LOGICAL_OR(uses_auto) AS uses_auto,
+       SUM(input_tokens + output_tokens + cache_read_tokens + cache_creation_tokens) AS tokens
 FROM {{ds}}.v_person_day WHERE {F} GROUP BY user_email ORDER BY cost DESC""",
 
     "categories": f"""

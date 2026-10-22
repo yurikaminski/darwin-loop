@@ -256,6 +256,34 @@ function splitChart(data) {
   };
   by.onchange = metric.onchange = draw; draw();
 }
+const MFMT = {cost: usd, tokens: tok, sessions: num, turns: num, people: num};
+// Funnel stages from per-person rows; metric = people (count) or the stage's summed cost | tokens | sessions | turns.
+function funnelBars(rows, roster) {
+  const sel = $('#fn-metric'); if (!sel) return;
+  const act = rows.filter(x => x.turns > 0), hab = act.filter(x => x.days_active >= 3);
+  const stages = [['roster', null], ['active', act], ['habitual', hab], ['power', hab.filter(x => x.uses_mcp || x.uses_auto || x.commits + x.prs > 0)]];
+  const draw = () => {
+    const m = sel.value, vals = stages.map(([l, g]) => [l, g ? (m === 'people' ? g.length : g.reduce((s, x) => s + (x[m] || 0), 0)) : m === 'people' ? roster : act.reduce((s, x) => s + (x[m] || 0), 0)]);
+    const top = Math.max(...vals.map(v => v[1] || 0), 1);
+    $('#funnel').innerHTML = vals.map(([l, v]) => `<div><span>${l}</span><span class="b" style="width:${100 * (v || 0) / top}%"></span><em>${MFMT[m](v)}</em></div>`).join('');
+  };
+  sel.onchange = draw; draw();
+}
+// Top 10 people by the chosen metric.
+function personChart(rows) {
+  const sel = $('#pp-metric'); if (!sel || !window.Chart) return;
+  let chart;
+  const draw = () => {
+    if (chart) { chart.destroy(); charts = charts.filter(c => c !== chart); }
+    const m = sel.value, fmt = MFMT[m], tick = {color: css('--muted')};
+    const top = [...rows].sort((a, b) => (b[m] || 0) - (a[m] || 0)).slice(0, 10);
+    chart = new Chart($('#c-person'), {type: 'bar', data: {labels: top.map(x => x.person || x.user_email), datasets: [{label: m, data: top.map(x => x[m]), backgroundColor: css('--primary')}]},
+      options: {indexAxis: 'y', maintainAspectRatio: false, plugins: {legend: {display: false}, tooltip: {callbacks: {label: c => fmt(c.raw)}}},
+        scales: {x: {beginAtZero: true, ticks: {...tick, callback: fmt}, grid: {color: css('--border')}}, y: {ticks: tick, grid: {display: false}}}}});
+    charts.push(chart);
+  };
+  sel.onchange = draw; draw();
+}
 // Vertical bars for all 24 hours (São Paulo time), so quiet hours show as gaps.
 function hourChart(rows) {
   const metric = $('#hr-metric'); if (!metric || !window.Chart) return;
@@ -279,7 +307,7 @@ const flags = t => [t.flag_user_reject && chip('reject', 'bad'), t.flag_tool_fai
 
 // ---- pages ----
 async function overview(scope) {
-  const [o, tr, sq, cat, ins, dom, prj, sk, md, hr] = await Promise.all([api('overview'), api('trend'), api('squads'), api('categories'), api('insights'), api('domains'), api('projects'), api('skills'), api('models'), api('hourly')]);
+  const [o, tr, sq, cat, ins, dom, prj, sk, md, hr, pe] = await Promise.all([api('overview'), api('trend'), api('squads'), api('categories'), api('insights'), api('domains'), api('projects'), api('skills'), api('models'), api('hourly'), api('people')]);
   const r = o.rows[0] || {}, days = periodDays();
   const clean = 1 - div(r.friction_b, r.closed_turns), low = lowChip(r.closed_turns, r.active);
   let h = `<h1><b>${scope ? '03' : '01'}</b>${esc(scope || 'Overview')}</h1>`;
@@ -295,9 +323,11 @@ async function overview(scope) {
   h += kpi('s3', '', 'Tool calls', 'toolcalls', `<a href="${link('health')}">${num(r.tool_calls)}</a>`, `${num(div(r.tool_calls, r.turns))} per turn`, o);
   h += kpi(`s3 ${div(r.tool_fails, r.tool_calls) > 0.1 ? 'low' : ''}`, '', 'Tool error rate', 'toolcalls', pct(div(r.tool_fails, r.tool_calls)), `${num(r.tool_fails)} failed · by tool in 06 Health`, o);
   h += kpi('s3', '', 'Cold share', 'spend', pct(div(r.cold_calls, r.agent_calls)), `${num(r.cold_calls)} of ${num(r.agent_calls)} agent calls`, o);
-  const fun = [['roster', r.roster], ['active', r.active], ['habitual', r.habitual], ['power', r.power]], top = Math.max(...fun.map(f => f[1] || 0), 1);
-  h += `<div class="col">` + card('', '1.14', 'Adoption funnel', 'funnel', `<div class="funnel">${fun.map(([l, v]) => `<div><span>${l}</span><span class="b" style="width:${100 * (v || 0) / top}%"></span><em>${num(v)}</em></div>`).join('')}</div>`, o) +
-    card('', '1.4', 'Depth over time', 'trend', tr.rows.length ? '<canvas id="c-trend"></canvas>' : '<p class="empty">no activity</p>', tr) + `</div>`;
+  const METRIC = `<select id="%s"><option value="cost">money</option><option value="tokens">tokens</option><option value="sessions">sessions</option><option value="turns">turns</option>%s</select>`;
+  const bar = (id, extra = '') => `<div class="bar" style="padding:0 0 8px;border:0"><label>show ${METRIC.replace('%s', id).replace('%s', extra)}</label></div>`;
+  h += card('s4', '1.14', 'Adoption funnel', 'funnel', bar('fn-metric', '<option value="people">people</option>') + '<div id="funnel" class="funnel"></div>', pe);
+  h += card('s8', '1.15', 'Use per person', 'people', bar('pp-metric') + '<canvas id="c-person"></canvas>', pe);
+  h += card('s8', '1.4', 'Depth over time', 'trend', tr.rows.length ? '<canvas id="c-trend"></canvas>' : '<p class="empty">no activity</p>', tr);
   h += card('s4', '1.8', 'Where spend goes', 'spend', spendDonut(r), o);
   h += card('s6', '1.10', 'Breakdown', 'models', `<div class="bar" style="padding:0 0 8px;border:0"><label>by <select id="sp-by"><option value="model">model</option><option value="project">project</option><option value="skill">skill / command</option></select></label>
     <label>show <select id="sp-metric"><option value="cost">cost</option><option value="tokens">tokens</option></select></label></div><canvas id="c-split"></canvas>`, md);
@@ -319,7 +349,7 @@ async function overview(scope) {
     {h: 'name', f: x => esc(x.name) + (x.source ? ' ' + chip(x.source) : '')}, {h: 'uses', n: 1, f: x => num(x.uses)},
     {h: 'people', n: 1, f: x => num(x.people)}, {h: 'tokens', n: 1, f: x => tok(x.tokens)}, {h: 'cost', n: 1, f: x => usd(x.cost)}], sk.rows), sk);
   h += card('s6', '1.9', 'Top actions', 'insights', insightList(ins.rows.slice(0, 3)) + `<p><a href="${link('insights')}">all insights →</a></p>`, ins);
-  return [h, () => { lineChart('c-trend', tr.rows); splitChart({model: md.rows, project: prj.rows, skill: sk.rows}); hourChart(hr.rows); spendChart(r); }];
+  return [h, () => { funnelBars(pe.rows, r.roster); personChart(pe.rows); lineChart('c-trend', tr.rows); splitChart({model: md.rows, project: prj.rows, skill: sk.rows}); hourChart(hr.rows); spendChart(r); }];
 }
 
 function squadTable(rows, days) {
