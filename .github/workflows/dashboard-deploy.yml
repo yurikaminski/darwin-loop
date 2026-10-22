@@ -1,0 +1,25 @@
+# Deploys the AI usage dashboard to Cloud Run on every push to main that touches dashboard/.
+# Auth: Workload Identity Federation (no key in GitHub); the provider only accepts this repo on refs/heads/main.
+name: dashboard-deploy
+on:
+  push:
+    branches: [main]
+    paths: ["dashboard/**", ".github/workflows/dashboard-deploy.yml"]
+  workflow_dispatch:
+concurrency: { group: dashboard-deploy, cancel-in-progress: false }
+permissions: { contents: read, id-token: write }
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    defaults: { run: { working-directory: dashboard } }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - run: pip install -q -r requirements.txt pytest && python -m pytest -q
+      - uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: projects/611123308603/locations/global/workloadIdentityPools/github/providers/darwin-loop
+          service_account: darwinloop-deployer@brain003-mvp.iam.gserviceaccount.com
+      - uses: google-github-actions/setup-gcloud@v2
+      - run: bash deploy.sh

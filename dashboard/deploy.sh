@@ -5,6 +5,8 @@ P=brain003-mvp; R=southamerica-east1; SVC=darwinloop-dash; DS=darwinloop_telemet
 SA=$SVC@$P.iam.gserviceaccount.com
 cd "$(dirname "$0")"
 
+# One-time infra; CI (GitHub sets CI=true) only applies views and deploys, so its deployer SA stays least-privilege.
+if [ -z "${CI:-}" ]; then
 gcloud iam service-accounts describe $SA --project $P >/dev/null 2>&1 ||
   gcloud iam service-accounts create $SVC --project $P --display-name "DarwinLoop dashboard"
 
@@ -17,6 +19,7 @@ done
 
 gcloud projects add-iam-policy-binding $P --member serviceAccount:$SA --role roles/bigquery.jobUser --condition=None >/dev/null
 bq query --use_legacy_sql=false "GRANT \`roles/bigquery.dataEditor\` ON SCHEMA \`$P.$DS\` TO \"serviceAccount:$SA\"" >/dev/null
+fi
 
 bq query --use_legacy_sql=false < views.sql >/dev/null
 

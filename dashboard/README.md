@@ -7,6 +7,7 @@ OTLP/HTTP JSON ingest → BigQuery (`brain003-mvp.darwinloop_telemetry`) → rea
 - `views.sql`: every metric (v_events → v_calls / v_turns → v_cost_alloc / v_sessions / v_person_day).
 - `queries.py`: one named query per dashboard card.
 - `deploy.sh`: applies `views.sql`, then deploys. Tests: `python -m pytest -q`.
+- Auto-deploy: `.github/workflows/dashboard-deploy.yml` runs tests + `deploy.sh` on every push to `main` touching `dashboard/`. It authenticates through Workload Identity Federation (pool `github`, provider `darwin-loop`, only `refs/heads/main` of this repo) as `darwinloop-deployer`; with `CI` set, `deploy.sh` skips the one-time SA/secret/IAM setup, so run it locally once for a fresh project.
 
 ## Setup: Claude Code (each person)
 
