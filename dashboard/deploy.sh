@@ -18,6 +18,7 @@ for s in dl-ingest-token dl-dash-pass; do  # random values go straight into Secr
 done
 
 gcloud projects add-iam-policy-binding $P --member serviceAccount:$SA --role roles/bigquery.jobUser --condition=None >/dev/null
+gcloud projects add-iam-policy-binding $P --member serviceAccount:$SA --role roles/aiplatform.user --condition=None >/dev/null  # session summaries (Gemini)
 bq query --use_legacy_sql=false "GRANT \`roles/bigquery.dataEditor\` ON SCHEMA \`$P.$DS\` TO \"serviceAccount:$SA\"" >/dev/null
 fi
 

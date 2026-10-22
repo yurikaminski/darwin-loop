@@ -57,3 +57,17 @@ def test_redacted_text_dropped():
 def test_metrics():
     m = metrics_to_rows(METRICS, "now")[0]
     assert (m["name"], m["value"], m["user_email"], m["attrs"]) == ("cost.usage", 0.5, "a@b.c", {"model": "m"})
+
+
+def test_summary_prompt_truncates():
+    import summarize
+    texts = [{"kind": "prompt", "turn_no": 1, "text": "x" * 10_000}] * 100
+    p = summarize.build_prompt({"cost_usd": 1}, [{"turn_no": 1}], texts, [])
+    assert "[…]" in p and "omitido" in p and len(p) < summarize.MAX_TOTAL + 10_000
+    assert "sem texto" in summarize.build_prompt({}, [], [], [])
+
+
+def test_parse_moods_clamps_and_drops_unknown_ids():
+    import summarize
+    got = summarize.parse_moods('[{"id":"a","mood":5},{"id":"b","mood":-1},{"id":"zz","mood":0},{"id":"c","mood":"2"}]', {"a", "b", "c"})
+    assert got == {"a": 2, "b": -1}

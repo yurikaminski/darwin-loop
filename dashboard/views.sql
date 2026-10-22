@@ -5,6 +5,10 @@
 -- Thresholds (config): cache_ttl_s 300, resume_gap_s 21600, fast_reprompt_s 60, followup_window_s 1800,
 -- open_turn_grace_s 1800.
 
+-- AI mood per closed turn (-2 very disappointed .. 2 happy), written by POST /api/mood. Holds no text, so it does not expire.
+CREATE TABLE IF NOT EXISTS `brain003-mvp.darwinloop_telemetry.turn_mood` (
+  prompt_id STRING, session_id STRING, mood INT64, model STRING, scored_at TIMESTAMP);
+
 CREATE OR REPLACE VIEW `brain003-mvp.darwinloop_telemetry.v_events` AS
 SELECT e.*, COALESCE(p.squad, e.team, 'unassigned') AS squad, COALESCE(p.name, e.user_email) AS person,
        JSON_VALUE(attrs, '$.query_source') AS query_source,
@@ -103,7 +107,8 @@ SELECT *,
          OR (turn_state = 'closed' AND next_correction_kw IS TRUE) AS is_friction,
        CASE WHEN NOT has_response THEN 'no_answer' WHEN n_user_reject > 0 THEN 'reject' WHEN n_tool_fail > 0 THEN 'tool_fail'
        END AS fast_reprompt_reason
-FROM f;
+FROM f LEFT JOIN (  -- concurrent scorers may write a turn twice; any score wins
+  SELECT prompt_id, ANY_VALUE(mood) AS mood FROM `brain003-mvp.darwinloop_telemetry.turn_mood` GROUP BY 1) USING (prompt_id);
 
 -- Exclusive spend split per api_request: overhead > cold excess > friction > useful (segments sum to the total).
 CREATE OR REPLACE VIEW `brain003-mvp.darwinloop_telemetry.v_cost_alloc` AS
@@ -134,7 +139,7 @@ WITH t AS (
          SUM(input_tokens + output_tokens + cache_read_tokens + cache_creation_tokens) AS tokens,
          ARRAY_AGG(DISTINCT main_model IGNORE NULLS) AS models,
          APPROX_TOP_COUNT(domain, 2) AS domain_top, APPROX_TOP_COUNT(project, 2) AS project_top,
-         LOGICAL_OR(turn_state = 'open') AS is_live
+         LOGICAL_OR(turn_state = 'open') AS is_live, ROUND(AVG(mood)) AS mood
   FROM `brain003-mvp.darwinloop_telemetry.v_turns` GROUP BY session_id),
 c AS (
   SELECT session_id, SUM(cost_usd) AS cost_usd, SUM(IF(is_agent, cost_usd, 0)) AS agent_cost, SUM(overhead) AS overhead_cost,

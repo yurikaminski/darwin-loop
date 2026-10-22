@@ -27,7 +27,7 @@ nav { display: flex; flex-wrap: wrap; gap: 4px 16px; font-family: var(--mono); f
 nav a { color: var(--muted); } nav a b { color: var(--primary); font-weight: 400; } nav a.on { color: var(--text); }
 .bar { padding: 12px var(--gutter); display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; border-bottom: 1px solid var(--border); font-family: var(--mono); font-size: 12px; color: var(--muted); }
 .bar label { display: flex; gap: 6px; align-items: center; }
-select, input[type=date] { color-scheme: dark; background: var(--surface); color: var(--text); border: 1px solid var(--border); border-radius: 4px; padding: 4px 6px; font: inherit; max-width: 200px; }
+select, input[type=date], input[list] { color-scheme: dark; background: var(--surface); color: var(--text); border: 1px solid var(--border); border-radius: 4px; padding: 4px 6px; font: inherit; max-width: 200px; }
 .crumbs { flex: 1 1 100%; } .crumbs a, .crumbs span { margin-right: 6px; } .crumbs i { font-style: normal; margin-right: 6px; color: var(--lowdata); }
 .tz { margin-left: auto; }
 main { padding: 24px var(--gutter) 64px; display: grid; gap: 16px; grid-template-columns: repeat(12, 1fr); }
@@ -63,6 +63,11 @@ td.n, th.n { text-align: right; font-family: var(--mono); }
 main > p, .empty { grid-column: 1 / -1; } .empty { color: var(--muted); font-family: var(--mono); font-size: 12px; }
 .err { color: var(--bad); font-family: var(--mono); font-size: 12px; white-space: pre-wrap; }
 pre { background: var(--bg); border: 1px solid var(--border); padding: 12px; overflow: auto; font: 12px/1.5 var(--mono); white-space: pre-wrap; }
+tr.go { cursor: pointer; } tr.go:hover td { background: var(--bg); }
+.msg { border-left: 2px solid var(--border); padding: 6px 12px; margin: 10px 0; } .msg.user { border-color: var(--primary); }
+.msg b { display: block; font: 400 11px var(--mono); color: var(--muted); text-transform: uppercase; margin-bottom: 4px; }
+.msg .prompt { max-height: none; } .msg details summary { cursor: pointer; color: var(--muted); font: 12px var(--mono); }
+.md { line-height: 1.5; } .md ul { margin: 4px 0 8px; padding-left: 20px; }
 .prompt { white-space: pre-wrap; font-family: var(--mono); font-size: 12px; max-height: 260px; overflow: auto; }
 .ins { border-left: 2px solid var(--warn); padding: 8px 12px; margin: 8px 0; background: var(--bg); }
 .ins b { font-family: var(--mono); color: var(--warn); font-weight: 400; margin-right: 8px; }
@@ -100,6 +105,8 @@ const tok = v => v == null ? '—' : (+v).toLocaleString('en-US', {notation: 'co
 const tf = new Intl.DateTimeFormat('pt-BR', {timeZone: 'America/Sao_Paulo', dateStyle: 'short', timeStyle: 'medium'});
 const ts = v => v ? tf.format(new Date(v)) : '—';
 const dur = s => s == null ? '—' : s < 60 ? s + 's' : s < 3600 ? Math.round(s / 60) + 'm' : (s / 3600).toFixed(1) + 'h';
+const MOOD = {2: ['😁', 'happy with the result'], 1: ['🙂', 'slightly positive'], 0: ['😐', 'neutral'], '-1': ['😕', 'slightly negative'], '-2': ['😡', 'very disappointed']};
+const mood = v => v == null ? '—' : `<span role="img" title="${MOOD[Math.round(v)][1]}" aria-label="${MOOD[Math.round(v)][1]}">${MOOD[Math.round(v)][0]}</span>`;
 const chip = (t, cls = '') => `<span class="chip ${cls}">${esc(t)}</span>`;
 const LOW = {turns: 20, people: 3}, K_MIN = 5;
 let charts = [];
@@ -124,9 +131,14 @@ const DEFS = {
   domains: 'Work domain per prompt (desenvolvimento, produto, design, qa) from the keyword heuristic kw-5; a session takes its most frequent domain. Tool: Cowork = service.name cowork, everything else Claude Code. Needs prompt text (OTEL_LOG_USER_PROMPTS=1 / otlpContentCapture), otherwise "untagged".',
   toolcalls: 'Tool executions (tool_result events) and the share with success=false. Rejected permission prompts are not errors; see 06 Health for the per-tool split.',
   categories: 'Turn intent from the prompt text heuristic (kw-5). Only for people who opted in to prompt logging; others show as "no text".',
+  roster: 'Everyone seen in telemetry (all time) plus everyone saved here. Type or pick a squad and save; empty = unassigned. Saved people form the roster behind penetration and R9. Applies to all periods at once.',
   people: 'Per person in the period. Cold share = cold agent calls ÷ agent calls.',
-  sessions: 'One row per session. Live = activity in the last 30 min.',
-  turns: 'One row per prompt.id. Flags are empty while the turn is open.',
+  sessions: 'One row per session. Live = activity in the last 30 min. Mood = mean AI mood of its turns. Click a row to open it.',
+  mood: 'AI mood (Gemini) per closed turn: 😁 happy with the result, 🙂 slightly positive, 😐 neutral, 😕 slightly negative, 😡 very disappointed. Judged from the prompt, the end of the answer and mostly the next prompt. Needs prompt text (opt-in, 30 days); scored once on first view and kept without text. — = no text or still open.',
+  summary: 'Executive summary written by a cheap Gemini model (Vertex AI) from the session metrics, turns, tools and, when opted in, the prompt and response text. Generated on click, not stored.',
+  conversation: 'Every prompt and Claude response of the session, in order. Kept 30 days in raw_texts, only with OTEL_LOG_USER_PROMPTS=1 (Cowork: otlpContentCapture prompts).',
+  session_tools: 'tool_result events of this session: calls, failures and total time per tool (skills by name).',
+  turns: 'One row per prompt.id. Flags and mood are empty while the turn is open. Mood: see the session page definition.',
   turn: 'Every event of this turn with the per-call cost split. Prompt text kept 30 days, only with OTEL_LOG_USER_PROMPTS=1.',
   tools: 'Tool calls, failures and permission rejects (user, not policy).',
   mcp: 'MCP connection attempts. Claude Code does not export server names, so rows are scope × transport.',
@@ -176,14 +188,17 @@ function openDef(key) {
     (r ? `<p class="chip">n = ${r.n}</p><pre>${esc(JSON.stringify(r.params, null, 1))}</pre><pre>${esc(r.sql.trim())}</pre>` : '');
   $('#drawer').classList.add('open'); $('#close').focus();
 }
-document.addEventListener('click', e => { const b = e.target.closest('[data-def]'); if (b) openDef(b.dataset.def); });
+document.addEventListener('click', e => {
+  const b = e.target.closest('[data-def]'); if (b) return openDef(b.dataset.def);
+  const r = !e.target.closest('a, button') && e.target.closest('tr[data-href]'); if (r) location.href = r.dataset.href;
+});
 $('#close').onclick = () => $('#drawer').classList.remove('open');
 document.addEventListener('keydown', e => e.key === 'Escape' && $('#drawer').classList.remove('open'));
 
 function table(cols, rows, empty = 'no data in this period') {
   if (!rows.length) return `<p class="empty">${empty}</p>`;
   return `<div class="tw"><table><thead><tr>${cols.map(c => `<th class="${c.n ? 'n' : ''}">${esc(c.h)}</th>`).join('')}</tr></thead><tbody>` +
-    rows.map(r => `<tr class="${r._low ? 'low' : ''}">${cols.map(c => `<td class="${c.n ? 'n' : ''}">${c.f(r)}</td>`).join('')}</tr>`).join('') + '</tbody></table></div>';
+    rows.map(r => `<tr class="${r._low ? 'low' : ''}${r._href ? ' go' : ''}"${r._href ? ` data-href="${r._href}"` : ''}>${cols.map(c => `<td class="${c.n ? 'n' : ''}">${c.f(r)}</td>`).join('')}</tr>`).join('') + '</tbody></table></div>';
 }
 function kpi(cls, n, title, key, v, sub, resp, extra) {
   return card(`kpi ${cls}`, n, title, key, `<div class="v">${v}</div><div class="sub">${sub || '&nbsp;'}</div>`, resp, extra);
@@ -331,32 +346,76 @@ function peopleTable(rows) {
     {h: 'cold share', n: 1, f: p => pct(div(p.cold_calls, p.agent_calls))}, {h: 'lines', n: 1, f: p => num(p.lines_added)},
     {h: 'uses', f: p => [p.uses_mcp && chip('mcp'), p.uses_auto && chip('auto')].filter(Boolean).join(' ')}], rows);
 }
+async function rosterPage() {
+  const r = await api('roster'), squads = [...new Set(r.rows.map(x => x.squad).filter(Boolean))].sort();
+  return [`<h1><b>03</b>People</h1>` + card('', '', 'Squad assignment', 'roster',
+    `<datalist id="squad-list">${squads.map(s => `<option value="${esc(s)}">`).join('')}</datalist>` +
+    table([{h: 'email', f: x => `<a href="${link('person', x.email, {email: x.email})}">${esc(x.email)}</a>`},
+      {h: 'first seen', f: x => esc(x.first_seen || '—')}, {h: 'last seen', f: x => esc(x.last_seen || '—')},
+      {h: 'sessions', n: 1, f: x => num(x.sessions)},
+      {h: 'squad', f: x => `<form class="sq" data-email="${esc(x.email)}"><input name="squad" list="squad-list" maxlength="40" value="${esc(x.squad || '')}" placeholder="unassigned" aria-label="squad of ${esc(x.email)}"> <button>save</button></form>`}],
+      r.rows, 'no users seen yet'), r)];
+}
+document.addEventListener('submit', async e => {
+  const f = e.target.closest('form.sq'); if (!f) return;
+  e.preventDefault(); f.querySelector('button').disabled = true;
+  const r = await fetch('/api/people', {method: 'POST', headers: {'content-type': 'application/json'}, body: JSON.stringify({email: f.dataset.email, squad: f.squad.value})});
+  if (!r.ok) { f.querySelector('button').disabled = false; return alert('save failed: ' + (await r.text()).slice(0, 200)); }
+  cache.clear(); render();
+});
 async function personPage(email) {
   const [o, s] = await Promise.all([overview('Person · ' + email), api('sessions', {email})]);
   return [o[0] + card('', '04', 'Sessions', 'sessions', sessionsTable(s.rows), s), o[1]];
 }
 function sessionsTable(rows) {
   return table([{h: 'start', f: s => `<a href="${link('session', s.session_id, {session: s.session_id, email: s.user_email})}">${ts(s.start_ts)}</a>` + (s.is_live ? ' ' + chip('live', 'ok') : '')},
-    {h: 'person', f: s => esc(s.person)}, {h: 'surface', f: s => esc(SURFACE[s.surface] || s.surface)}, {h: 'domain', f: s => esc(s.domain || '—')},
+    {h: 'mood', f: s => mood(s.mood)}, {h: 'person', f: s => esc(s.person)}, {h: 'surface', f: s => esc(SURFACE[s.surface] || s.surface)}, {h: 'domain', f: s => esc(s.domain || '—')},
     {h: 'duration', n: 1, f: s => dur(s.duration_s)}, {h: 'turns', n: 1, f: s => num(s.n_turns)},
     {h: 'friction', n: 1, f: s => num(s.n_friction_b)}, {h: 'cache hit', n: 1, f: s => pct(s.cache_hit)},
     {h: 'cost', n: 1, f: s => usd(s.cost_usd)}, {h: 'cold $', n: 1, f: s => usd(s.cold_excess)}, {h: 'friction $', n: 1, f: s => usd(s.friction_cost)},
-    {h: 'models', f: s => esc((s.models || []).join(', '))}], rows);
+    {h: 'models', f: s => esc((s.models || []).join(', '))}], rows.map(s => ({...s, _href: link('session', s.session_id, {session: s.session_id, email: s.user_email})})));
 }
 async function sessionPage(id) {
-  const [s, t] = await Promise.all([api('sessions', {session: id, email: ''}), api('session_turns', {session: id})]);
+  const [s, t, x, tl] = await Promise.all([api('sessions', {session: id, email: ''}), api('session_turns', {session: id}),
+    api('session_texts', {session: id}), api('session_tools', {session: id})]);
   const r = s.rows[0];
   if (!r) return [`<h1><b>04</b>Session</h1><p class="empty">session not found in this period</p>`];
   let h = `<h1><b>04</b>Session · ${esc(r.person)} · ${ts(r.start_ts)}</h1>`;
   h += kpi('s3', '', 'Turns', 'sessions', num(r.n_turns), `${num(r.n_friction_b)} with friction`, s);
   h += kpi('s3', '', 'Duration', 'sessions', dur(r.duration_s), esc(r.surface), s);
   h += kpi('s3', '', 'Cost', 'spend', usd(r.cost_usd), `cold ${usd(r.cold_excess)} · friction ${usd(r.friction_cost)} · overhead ${usd(r.overhead_cost)}`, s);
-  h += kpi('s3', '', 'Cache hit', 'sessions', pct(r.cache_hit), `${num(r.tokens)} tokens`, s);
-  h += card('', '05', 'Turns', 'turns', table([{h: '#', n: 1, f: t => num(t.turn_no)},
+  h += kpi('s3', '', 'Cache hit', 'sessions', pct(r.cache_hit), `${num(r.tokens)} tokens · mood ${mood(r.mood)}`, s);
+  h += card('s8', '', 'Executive summary', 'summary', `<div id="sum" class="md"><button id="sum-go">Generate summary</button> <span class="empty">Gemini · ${num(x.n)} messages</span></div>`);
+  h += card('s4', '', 'Details', 'sessions', `<p class="sub">project ${esc(r.project || 'outside a project')} · domain ${esc(r.domain || '—')} · squad ${esc(r.squad || '—')}</p>` +
+    `<p class="sub">models ${esc((r.models || []).join(', ') || '—')}</p><p class="sub">${num(r.n_user_reject)} rejects · ${num(r.n_tool_fail)} tool fails · ${num(r.n_corrections)} corrections · ${num(r.n_abandoned)} abandoned · ${num(r.n_api_errors)} API errors</p>` +
+    `<p class="empty">${esc(r.session_id)}${r.is_live ? ' · ' + chip('live', 'ok') : ''}</p>`, s);
+  h += card('', '', 'Tools & skills', 'session_tools', table([{h: 'tool', f: x => esc(x.tool) + (x.is_skill ? ' ' + chip('skill') : '')},
+    {h: 'calls', n: 1, f: x => num(x.calls)}, {h: 'fail', n: 1, f: x => num(x.fails)}, {h: 'time', n: 1, f: x => dur(Math.round((x.total_ms || 0) / 1000))}], tl.rows, 'no tool calls'), tl);
+  h += card('', '05', 'Turns', 'mood', table([{h: '#', n: 1, f: t => num(t.turn_no)}, {h: 'mood', f: t => mood(t.mood)},
     {h: 'start', f: t => `<a href="${link('turn', t.prompt_id)}">${ts(t.start_ts)}</a>`},
     {h: 'intent', f: t => esc(t.category || '—')}, {h: 'domain', f: t => esc(t.domain || '—')}, {h: 'calls', n: 1, f: t => num(t.n_agent_calls)}, {h: 'tools', n: 1, f: t => num(t.n_tool_calls)},
     {h: 'next in', n: 1, f: t => dur(t.next_gap_s)}, {h: 'cost', n: 1, f: t => usd(t.agent_cost)}, {h: 'flags', f: flags}], t.rows), t);
+  h += card('', '', 'Conversation', 'conversation', x.rows.length ? x.rows.map(m => {
+    const long = m.text.length > 1500, who = m.kind === 'prompt' ? 'user' : 'claude';
+    const body = long ? `<details><summary>${esc(m.text.slice(0, 300))}… (${num(m.text.length)} chars)</summary><div class="prompt">${esc(m.text)}</div></details>` : `<div class="prompt">${esc(m.text)}</div>`;
+    return `<div class="msg ${who}"><b>${who} · turn ${m.turn_no ?? '?'} · ${ts(m.ts)}${m.prompt_id ? ` · <a href="${link('turn', m.prompt_id)}">open turn</a>` : ''}</b>${body}</div>`;
+  }).join('') : `<p class="empty">no text: not opted in, redacted or past 30-day retention</p>`, x);
+  setTimeout(() => { const b = $('#sum-go'); if (b) b.onclick = () => summary(id); });
   return [h];
+}
+// tiny markdown: **bold**, "- " / "* " bullets, paragraphs; input is escaped first.
+const md = t => esc(t).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>').split(/\n{2,}/).map(p => /^\s*[-*] /m.test(p)
+  ? p.split('\n').map(l => /^\s*[-*] /.test(l) ? `<li>${l.replace(/^\s*[-*] /, '')}</li>` : `<p>${l}</p>`).join('').replace(/(<li>.*?<\/li>)+/gs, '<ul>$&</ul>')
+  : `<p>${p.replace(/\n/g, '<br>')}</p>`).join('');
+async function summary(id) {
+  const el = $('#sum'); el.innerHTML = '<p class="empty">summarizing…</p>';
+  const q = {days: 28, ...state().q, session: id}; Object.keys(q).forEach(k => (q[k] === '' || q[k] == null) && delete q[k]);
+  try {
+    const r = await fetch('/api/session_summary?' + new URLSearchParams(q), {method: 'POST'});
+    if (!r.ok) throw new Error(r.status + ' ' + (await r.text()).slice(0, 300));
+    const j = await r.json();
+    el.innerHTML = md(j.summary) + `<p class="empty">${esc(j.model)} · from ${num(j.n_texts)} messages · AI-generated, check before acting</p>`;
+  } catch (e) { el.innerHTML = `<p class="err">${esc(e.message)}</p><button id="sum-go">Retry</button>`; $('#sum-go').onclick = () => summary(id); }
 }
 async function turnPage(id) {
   const [t, e] = await Promise.all([api('turn', {prompt: id}), api('turn_events', {prompt: id})]);
@@ -366,7 +425,7 @@ async function turnPage(id) {
   let h = `<h1><b>05</b>Turn ${num(r.turn_no)} · ${esc(r.person)} · ${ts(r.start_ts)}</h1>`;
   h += card('s8', '', 'Prompt', 'turn', r.prompt_text ? `<div class="prompt">${esc(r.prompt_text)}</div>` :
     `<p class="empty">no text: not opted in, redacted or past 30-day retention · ${num(r.prompt_length)} chars</p>`, t);
-  h += card('s4', '', 'Assessment', 'clean', `<p>${flags(r)}</p><div class="sub empty">intent ${esc(r.category || '—')} · domain ${esc(r.domain || '—')} · tone ${esc(r.tone || '—')}` +
+  h += card('s4', '', 'Assessment', 'clean', `<p>${flags(r)}</p><div class="sub empty">intent ${esc(r.category || '—')} · domain ${esc(r.domain || '—')} · tone ${esc(r.tone || '—')} · mood ${mood(r.mood)}` +
     ` · next prompt in ${dur(r.next_gap_s)}${r.fast_reprompt_reason ? ' · reason ' + esc(r.fast_reprompt_reason) : ''}</div>` +
     `<p class="empty">agent ${usd(r.agent_cost)} · overhead ${usd(r.overhead_cost)} · ${num(r.cache_read_tokens)} cache-read tokens</p>`, t);
   h += card('', '', 'Timeline', 'turn', table([{h: 'time', f: x => ts(x.ts)},
@@ -384,7 +443,7 @@ async function listPage(kind) {
   const rows = only ? t.rows.filter(x => x.is_friction_b) : t.rows;
   return [`<h1><b>05</b>Turns</h1>` + card('', '', 'Turns', 'turns', `<p><a href="${link('turns', '', {friction: only ? '' : '1'})}">${only ? 'show all' : 'only friction'}</a></p>` +
     table([{h: 'start', f: x => `<a href="${link('turn', x.prompt_id)}">${ts(x.start_ts)}</a>`}, {h: 'person', f: x => esc(x.person)},
-      {h: 'intent', f: x => esc(x.category || '—')}, {h: 'domain', f: x => esc(x.domain || '—')}, {h: 'model', f: x => esc(x.main_model || '—')}, {h: 'calls', n: 1, f: x => num(x.n_agent_calls)},
+      {h: 'mood', f: x => mood(x.mood)}, {h: 'intent', f: x => esc(x.category || '—')}, {h: 'domain', f: x => esc(x.domain || '—')}, {h: 'model', f: x => esc(x.main_model || '—')}, {h: 'calls', n: 1, f: x => num(x.n_agent_calls)},
       {h: 'cost', n: 1, f: x => usd(x.agent_cost)}, {h: 'flags', f: flags}], rows), t)];
 }
 async function healthPage() {
@@ -404,7 +463,7 @@ async function insightsPage() {
 
 // ---- frame ----
 let turnCtx = null;
-const NAV = [['overview', '01', 'Overview'], ['squads', '02', 'Squads'], ['sessions', '04', 'Sessions'], ['turns', '05', 'Turns'], ['health', '06', 'Health'], ['insights', '07', 'Insights']];
+const NAV = [['overview', '01', 'Overview'], ['squads', '02', 'Squads'], ['people', '03', 'People'], ['sessions', '04', 'Sessions'], ['turns', '05', 'Turns'], ['health', '06', 'Health'], ['insights', '07', 'Insights']];
 function crumbs() {
   const {route, arg, q} = state(), c = [`<a href="${link('overview', '', {squad: '', email: '', session: ''})}">Org</a>`];
   const squad = q.squad, email = q.email || (route === 'turn' && turnCtx?.user_email), sess = q.session || (route === 'turn' && turnCtx?.session_id);
@@ -425,12 +484,21 @@ async function render() {
   crumbs();
   $('#main').innerHTML = '<p class="empty">loading…</p>';
   try {
-    const pages = {overview: () => overview(), squads: squadsPage, squad: () => squadPage(arg), person: () => personPage(arg),
+    const pages = {overview: () => overview(), squads: squadsPage, people: rosterPage, squad: () => squadPage(arg), person: () => personPage(arg),
       session: () => sessionPage(arg), turn: () => turnPage(arg), turns: () => listPage('turns'), sessions: () => listPage('sessions'),
       health: healthPage, insights: insightsPage};
     const [html, after] = await (pages[route] || pages.overview)();
     $('#main').innerHTML = html; after && after(); crumbs();
+    if (['sessions', 'turns', 'session', 'person'].includes(route)) scoreMoods();
   } catch (e) { $('#main').innerHTML = `<p class="err">${esc(e.message)}</p>`; }
+}
+let moodBusy = false;
+async function scoreMoods() {  // scores unscored turns of the current filter in batches of 40, re-rendering after each
+  if (moodBusy) return; moodBusy = true;
+  const q = new URLSearchParams(Object.entries({days: 28, ...state().q}).filter(([, v]) => v !== '' && v != null));
+  const r = await fetch('/api/mood?' + q, {method: 'POST'}).then(r => r.ok ? r.json() : {scored: 0}).catch(() => ({scored: 0}));
+  moodBusy = false;
+  if (r.scored) { cache.clear(); render(); }
 }
 function setRange() {
   const f = $('#f-from').value, t = $('#f-to').value;

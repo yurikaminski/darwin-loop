@@ -50,6 +50,15 @@ SELECT squad, ANY_VALUE(r.roster) AS roster, COUNT(DISTINCT IF(turns > 0, user_e
 FROM p LEFT JOIN r USING (squad) GROUP BY squad ORDER BY cost DESC""",
 
     # 03 Person list (within squad filter) and per-person daily series.
+    # every user ever seen in telemetry plus every saved people row, for the admin squad page (all time, ignores filters).
+    "roster": """
+WITH seen AS (
+  SELECT LOWER(user_email) AS email, MIN(DATE(ts, 'America/Sao_Paulo')) AS first_seen, MAX(DATE(ts, 'America/Sao_Paulo')) AS last_seen,
+         COUNT(DISTINCT session_id) AS sessions
+  FROM {ds}.raw_events WHERE IFNULL(user_email, '') != '' GROUP BY 1)
+SELECT COALESCE(s.email, LOWER(p.email)) AS email, p.name, p.squad, s.first_seen, s.last_seen, s.sessions
+FROM seen s FULL JOIN {ds}.people p ON LOWER(p.email) = s.email
+ORDER BY p.squad IS NOT NULL, s.last_seen DESC""",
     "people": f"""
 SELECT user_email, ANY_VALUE(person) AS person, ANY_VALUE(squad) AS squad,
        COUNT(DISTINCT IF(turns > 0, day, NULL)) AS days_active, MAX(IF(turns > 0, day, NULL)) AS last_day,
@@ -124,7 +133,7 @@ FROM {{ds}}.v_turns WHERE {FM} GROUP BY 1, 2 ORDER BY tool, turns DESC""",
     "sessions": f"""
 SELECT session_id, person, user_email, squad, surface, domain, start_ts, end_ts,
        TIMESTAMP_DIFF(end_ts, start_ts, SECOND) AS duration_s, n_turns, n_closed, n_friction_b, n_user_reject,
-       n_tool_fail, n_abandoned, n_api_errors, cache_hit, tokens, models, is_live,
+       n_tool_fail, n_abandoned, n_corrections, n_api_errors, cache_hit, tokens, models, is_live, project, mood,
        cost_usd, overhead_cost, cold_excess, friction_cost
 FROM {{ds}}.v_sessions
 WHERE {F} AND (@model IS NULL OR @model IN UNNEST(models)) AND (@session IS NULL OR session_id = @session)
@@ -134,18 +143,43 @@ ORDER BY start_ts DESC LIMIT 300""",
 SELECT prompt_id, turn_no, start_ts, end_ts, turn_state, category, domain, tone, prompt_length, main_model,
        n_agent_calls, n_tool_calls, n_tool_fail, n_user_reject, n_policy_block, n_api_errors, has_response, has_cold,
        next_gap_s, next_correction_kw, flag_user_reject, flag_tool_fail, flag_fast_reprompt, flag_abandoned,
-       fast_reprompt_reason, is_friction_b, is_friction, agent_cost, overhead_cost, cache_read_tokens, input_tokens
+       fast_reprompt_reason, is_friction_b, is_friction, agent_cost, overhead_cost, cache_read_tokens, input_tokens, mood
 FROM {ds}.v_turns WHERE session_id = @session ORDER BY turn_no""",
+
+    # Prompts and responses of one session, in order (only while within the 30-day raw_texts retention).
+    "session_texts": """
+SELECT x.ts, x.prompt_id, t.turn_no, x.kind, x.text
+FROM {ds}.raw_texts x LEFT JOIN {ds}.v_turns t USING (prompt_id)
+WHERE x.session_id = @session ORDER BY x.ts, x.kind DESC""",
+
+    "session_tools": """
+SELECT IFNULL(JSON_VALUE(attrs, '$.skill_name'), JSON_VALUE(attrs, '$.tool_name')) AS tool,
+       JSON_VALUE(attrs, '$.skill_name') IS NOT NULL AS is_skill, COUNT(*) AS calls,
+       COUNTIF(JSON_VALUE(attrs, '$.success') = 'false') AS fails,
+       SUM(SAFE_CAST(JSON_VALUE(attrs, '$.duration_ms') AS INT64)) AS total_ms
+FROM {ds}.v_events WHERE session_id = @session AND event_name = 'tool_result'
+GROUP BY 1, 2 ORDER BY calls DESC""",
 
     # 05 Turns list / one turn + its event timeline (prompt text only while within the 30-day retention).
     "turns": f"""
 SELECT prompt_id, session_id, person, user_email, squad, surface, start_ts, turn_state, category, domain, tone, main_model,
        n_agent_calls, n_tool_fail, n_user_reject, has_response, has_cold, is_friction_b, is_friction,
-       flag_user_reject, flag_tool_fail, flag_fast_reprompt, flag_abandoned, agent_cost, overhead_cost
+       flag_user_reject, flag_tool_fail, flag_fast_reprompt, flag_abandoned, agent_cost, overhead_cost, mood
 FROM {{ds}}.v_turns WHERE {FM} ORDER BY start_ts DESC LIMIT 500""",
 
+    # Closed, unscored turns with prompt text (30-day) for POST /api/mood: the prompt, the end of the answer, and the
+    # user's next prompt, which is where the reaction to the result shows. 40 per Gemini call.
+    "mood_todo": f"""
+WITH p AS (SELECT prompt_id, ANY_VALUE(text) AS text FROM {{ds}}.raw_texts WHERE kind = 'prompt' GROUP BY 1),
+r AS (SELECT prompt_id, ARRAY_AGG(text ORDER BY ts DESC LIMIT 1)[OFFSET(0)] AS text FROM {{ds}}.raw_texts WHERE kind = 'response' GROUP BY 1),
+t AS (SELECT *, LEAD(prompt_id) OVER (PARTITION BY session_id ORDER BY start_ts) AS next_id FROM {{ds}}.v_turns)
+SELECT t.prompt_id, t.session_id, SUBSTR(p.text, 1, 1500) AS prompt, SUBSTR(r.text, -800) AS response, SUBSTR(n.text, 1, 1500) AS next_prompt
+FROM t JOIN p USING (prompt_id) LEFT JOIN r USING (prompt_id) LEFT JOIN p n ON n.prompt_id = t.next_id
+WHERE {FM} AND t.turn_state = 'closed' AND t.mood IS NULL AND (@session IS NULL OR t.session_id = @session)
+ORDER BY t.start_ts DESC LIMIT 40""",
+
     "turn": """
-SELECT t.*, (SELECT ANY_VALUE(text) FROM {ds}.raw_texts x WHERE x.prompt_id = t.prompt_id AND x.kind = 'user_prompt') AS prompt_text
+SELECT t.*, (SELECT ANY_VALUE(text) FROM {ds}.raw_texts x WHERE x.prompt_id = t.prompt_id AND x.kind = 'prompt') AS prompt_text
 FROM {ds}.v_turns t WHERE prompt_id = @prompt""",
 
     "turn_events": """
