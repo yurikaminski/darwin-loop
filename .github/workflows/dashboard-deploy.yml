@@ -16,7 +16,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with: { python-version: "3.12" }
-      - run: pip install -q -r requirements.txt pytest && python -m pytest -q
+      - run: pip install -q -r requirements.txt pytest httpx==0.28.1 && python -m pytest -q
       - uses: google-github-actions/auth@v2
         with:
           workload_identity_provider: projects/611123308603/locations/global/workloadIdentityPools/github/providers/darwin-loop
