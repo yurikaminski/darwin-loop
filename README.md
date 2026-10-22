@@ -44,6 +44,10 @@ Darwin Loop operates on a continuous cycle:
 3. **Define Goals:** Configure your performance KPIs (tokens, message count, latency) in the agent settings.
 4. **Iterate:** Let the system collect trace data and generate improvement recommendations.
 
+## 📊 AI Usage Dashboard (`dashboard/`)
+
+Claude Code and Cowork telemetry (OTLP) lands in BigQuery and is shown on a Cloud Run dashboard covering adoption, cost and tokens per model, friction, projects, and skills and commands. Setup for each user: telemetry env vars **including** `OTEL_METRICS_INCLUDE_REPOSITORY=true` and `OTEL_LOG_TOOL_DETAILS=1`. For Cowork, an admin configures OpenTelemetry. Full guide and privacy rules: [dashboard/README.md](dashboard/README.md).
+
 ---
 
 *Darwin Loop: Making your agents 1% better every iteration.*
