@@ -22,6 +22,9 @@ SELECT (SELECT COUNT(*) FROM {{ds}}.people WHERE (@squad IS NULL OR squad = @squ
        (SELECT COUNTIF(days_active >= 3 AND (mcp OR auto OR ships > 0)) FROM u) AS power,
        (SELECT COUNTIF(mcp) FROM u) AS reach_mcp, (SELECT COUNTIF(auto) FROM u) AS reach_auto,
        (SELECT COUNTIF(ships > 0) FROM u) AS reach_ship,
+       -- sessions on the days the capability was used (capability events are day-grained, not per session)
+       (SELECT SUM(IF(uses_mcp, sessions, 0)) FROM p) AS reach_mcp_sessions, (SELECT SUM(IF(uses_auto, sessions, 0)) FROM p) AS reach_auto_sessions,
+       (SELECT SUM(IF(commits + prs > 0, sessions, 0)) FROM p) AS reach_ship_sessions,
        SUM(turns) AS turns, SUM(closed_turns) AS closed_turns, SUM(friction_b) AS friction_b, SUM(sessions) AS sessions,
        SUM(cost_usd) AS cost, SUM(useful_cost) AS useful, SUM(friction_cost) AS friction, SUM(cold_excess) AS cold,
        SUM(overhead_cost) AS overhead, SUM(disablable_overhead) AS disablable,
