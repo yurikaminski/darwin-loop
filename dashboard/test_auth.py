@@ -1,7 +1,11 @@
 import os
 
 os.environ.update(INGEST_TOKEN="t", DASH_USER="u", DASH_PASS="p")
+from unittest import mock  # noqa: E402
+
 from fastapi.testclient import TestClient  # noqa: E402
+
+mock.patch("google.cloud.bigquery.Client").start()  # CI has no GCP credentials; tests never hit BigQuery
 
 import main  # noqa: E402
 
