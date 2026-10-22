@@ -1,5 +1,6 @@
 """DarwinLoop AI usage dashboard: OTLP/HTTP JSON ingest -> BigQuery, plus a read-only dashboard API."""
 import base64
+import hashlib
 import hmac
 import json
 import os
@@ -45,6 +46,8 @@ def _insert(table, rows, json_cols=()):
 def _check_ingest(request):
     got = request.headers.get("authorization", "")
     if not hmac.compare_digest(got, f"Bearer {INGEST_TOKEN}"):
+        # fingerprint only, never the header: lets us tell a wrong token from a malformed header
+        print(f"ingest 401: len={len(got)} bearer={got.startswith('Bearer ')} sha={hashlib.sha256(got.encode()).hexdigest()[:8]}", flush=True)
         raise HTTPException(401)
 
 
