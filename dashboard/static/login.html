@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DarwinLoop Sign In</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&family=JetBrains+Mono&display=swap" rel="stylesheet">
+<style>
+:root { --bg:#0A0A0A; --surface:#141414; --border:#262626; --text:#FAFAFA; --muted:#A1A1A1; --primary:#8ED563; --cta:#23F884; --bad:#F25F5C; color-scheme: dark; }
+body { margin:0; min-height:100vh; display:grid; place-items:center; background:var(--bg); color:var(--text); font:14px/1.5 Inter, system-ui, sans-serif; padding:16px; box-sizing:border-box; }
+form { background:var(--surface); border:1px solid var(--border); padding:32px; width:100%; max-width:360px; display:grid; gap:14px; }
+img { height:32px; } h1 { margin:0; font-size:18px; } h1 b { color:var(--primary); font:400 14px 'JetBrains Mono', monospace; margin-right:8px; }
+label { display:grid; gap:6px; font:12px 'JetBrains Mono', monospace; color:var(--muted); }
+input { background:var(--bg); color:var(--text); border:1px solid var(--border); border-radius:4px; padding:10px; font:inherit; font-size:14px; }
+input:focus, button:focus-visible { outline:2px solid var(--cta); outline-offset:1px; }
+button { background:var(--cta); color:#0A0A0A; border:0; border-radius:4px; padding:10px; font:600 14px Inter, sans-serif; cursor:pointer; }
+.err { color:var(--bad); margin:0; font:12px 'JetBrains Mono', monospace; }
+</style>
+</head>
+<body>
+<form method="post" action="/login">
+  <img src="https://darwinloop.org/assets/logo-BXXZ-iFy.png" alt="DarwinLoop">
+  <h1><b>00</b>AI value dashboard</h1>
+  <!--ERR-->
+  <label>user <input name="user" autocomplete="username" required autofocus></label>
+  <label>password <input name="password" type="password" autocomplete="current-password" required></label>
+  <button type="submit">Sign in</button>
+</form>
+</body>
+</html>

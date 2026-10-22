@@ -1,0 +1,459 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DarwinLoop AI Value</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root {
+  --bg: #0A0A0A; --surface: #141414; --border: #262626; --text: #FAFAFA; --muted: #A1A1A1;
+  --primary: #8ED563; --accent: #199953; --cta: #23F884; --warn: #E5B341; --bad: #F25F5C; --lowdata: #3A3A3A;
+  --mono: 'JetBrains Mono', ui-monospace, monospace; --gutter: 32px;
+  color-scheme: dark;
+}
+@media (max-width: 720px) { :root { --gutter: 16px; } }
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--text); font: 400 14px/1.5 Inter, system-ui, sans-serif; }
+a { color: var(--primary); text-decoration: none; } a:hover { text-decoration: underline; }
+a:focus-visible, button:focus-visible, select:focus-visible { outline: 2px solid var(--cta); outline-offset: 2px; }
+header { border-bottom: 1px solid var(--border); padding: 16px var(--gutter); display: flex; flex-wrap: wrap; gap: 12px 24px; align-items: center; }
+header img { height: 28px; display: block; }
+.brand { display: flex; gap: 10px; align-items: center; font-weight: 600; }
+.brand span { font-family: var(--mono); color: var(--muted); font-size: 12px; font-weight: 400; }
+nav { display: flex; flex-wrap: wrap; gap: 4px 16px; font-family: var(--mono); font-size: 13px; }
+nav a { color: var(--muted); } nav a b { color: var(--primary); font-weight: 400; } nav a.on { color: var(--text); }
+.bar { padding: 12px var(--gutter); display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; border-bottom: 1px solid var(--border); font-family: var(--mono); font-size: 12px; color: var(--muted); }
+.bar label { display: flex; gap: 6px; align-items: center; }
+select, input[type=date] { color-scheme: dark; background: var(--surface); color: var(--text); border: 1px solid var(--border); border-radius: 4px; padding: 4px 6px; font: inherit; max-width: 200px; }
+.crumbs { flex: 1 1 100%; } .crumbs a, .crumbs span { margin-right: 6px; } .crumbs i { font-style: normal; margin-right: 6px; color: var(--lowdata); }
+.tz { margin-left: auto; }
+main { padding: 24px var(--gutter) 64px; display: grid; gap: 16px; grid-template-columns: repeat(12, 1fr); }
+h1 { grid-column: 1 / -1; margin: 0 0 4px; font-size: 22px; font-weight: 600; }
+h1 b, .card h2 b { color: var(--primary); font-family: var(--mono); font-weight: 400; margin-right: 8px; }
+.card { background: var(--surface); border: 1px solid var(--border); padding: 16px; grid-column: span 12; min-width: 0; }
+.s3 { grid-column: span 3; } .s4 { grid-column: span 4; } .s6 { grid-column: span 6; } .s8 { grid-column: span 8; }
+@media (max-width: 980px) { .s3 { grid-column: span 6; } .s4, .s6, .s8 { grid-column: span 12; } }
+@media (max-width: 520px) { .s3 { grid-column: span 12; } }
+.card h2 { margin: 0 0 12px; font-size: 13px; font-weight: 600; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.card h2 .defw { margin-left: auto; position: relative; display: flex; }
+.tip { display: none; position: absolute; top: calc(100% + 6px); right: 0; z-index: 20; width: 280px; padding: 8px 10px; background: var(--surface); border: 1px solid var(--border);
+  color: var(--text); font: 400 12px/1.4 var(--mono); display: none; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; pointer-events: none; }
+.defw:hover .tip, .defw:focus-within .tip { display: -webkit-box; }
+.card h2 .def { width: 20px; height: 20px; padding: 0; line-height: 1; }
+.kpi .v { font: 600 28px/1.2 var(--mono); } .kpi .sub { color: var(--muted); font-size: 12px; font-family: var(--mono); }
+.low .v, .low td { color: var(--muted); }
+.chip { font: 400 11px var(--mono); border: 1px solid var(--border); border-radius: 4px; padding: 0 6px; color: var(--muted); white-space: nowrap; }
+.chip.beta { border-color: var(--warn); color: var(--warn); } .chip.lowdata { background: var(--lowdata); border-color: var(--lowdata); color: var(--text); }
+.chip.bad { border-color: var(--bad); color: var(--bad); } .chip.ok { border-color: var(--accent); color: var(--primary); }
+button { background: transparent; color: var(--muted); border: 1px solid var(--border); border-radius: 4px; font: 11px var(--mono); padding: 2px 8px; cursor: pointer; }
+button:hover { color: var(--text); }
+.spend { display: flex; height: 28px; border: 1px solid var(--border); }
+.spend div { height: 100%; } .legend { display: flex; flex-wrap: wrap; gap: 8px 20px; margin-top: 10px; font: 12px var(--mono); color: var(--muted); }
+.legend i { display: inline-block; width: 10px; height: 10px; margin-right: 6px; vertical-align: middle; }
+.funnel div { display: grid; grid-template-columns: 90px 1fr 60px; gap: 8px; align-items: center; margin: 6px 0; font: 12px var(--mono); }
+.funnel span.b { height: 14px; background: var(--accent); display: block; } .funnel em { font-style: normal; text-align: right; }
+.tw { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+th { text-align: left; font: 400 11px var(--mono); color: var(--muted); text-transform: uppercase; border-bottom: 1px solid var(--border); padding: 6px 8px; white-space: nowrap; }
+td { border-bottom: 1px solid var(--border); padding: 6px 8px; white-space: nowrap; }
+td.n, th.n { text-align: right; font-family: var(--mono); }
+main > p, .empty { grid-column: 1 / -1; } .empty { color: var(--muted); font-family: var(--mono); font-size: 12px; }
+.err { color: var(--bad); font-family: var(--mono); font-size: 12px; white-space: pre-wrap; }
+pre { background: var(--bg); border: 1px solid var(--border); padding: 12px; overflow: auto; font: 12px/1.5 var(--mono); white-space: pre-wrap; }
+.prompt { white-space: pre-wrap; font-family: var(--mono); font-size: 12px; max-height: 260px; overflow: auto; }
+.ins { border-left: 2px solid var(--warn); padding: 8px 12px; margin: 8px 0; background: var(--bg); }
+.ins b { font-family: var(--mono); color: var(--warn); font-weight: 400; margin-right: 8px; }
+#drawer { position: fixed; top: 0; right: 0; bottom: 0; width: min(560px, 100vw); background: var(--surface); border-left: 1px solid var(--border); padding: 20px; overflow: auto; transform: translateX(100%); transition: transform .15s; z-index: 10; }
+#drawer.open { transform: none; } #drawer h3 { margin: 0 0 8px; font-size: 15px; }
+#drawer p { color: var(--muted); }
+canvas { max-height: 240px; }
+</style>
+</head>
+<body>
+<header>
+  <a class="brand" href="#/overview"><img src="https://darwinloop.org/assets/logo-BXXZ-iFy.png" alt="DarwinLoop"><span>AI value · beta</span></a>
+  <nav id="nav"></nav>
+</header>
+<div class="bar" id="bar">
+  <label>period <select id="f-days"><option value="7">7d</option><option value="14">14d</option><option value="28">28d</option><option value="90">90d</option><option value="custom">custom</option></select></label>
+  <span id="f-range" hidden><input type="date" id="f-from" aria-label="from"> – <input type="date" id="f-to" aria-label="to"></span>
+  <label>squad <select id="f-squad"><option value="">all</option></select></label>
+  <label>tool <select id="f-surface"><option value="">all</option><option value="claude-code">Claude Code · CLI</option><option value="claude-code-desktop">Claude Code · Desktop</option><option value="cowork">Cowork</option></select></label>
+  <label>model <select id="f-model"><option value="">all</option></select></label>
+  <span class="tz">times: America/Sao_Paulo</span>
+  <div class="crumbs" id="crumbs"></div>
+</div>
+<main id="main"></main>
+<aside id="drawer" aria-label="Definition"><button id="close" style="float:right">close ×</button><div id="dbody"></div></aside>
+<script>
+const $ = s => document.querySelector(s);
+const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const usd = v => v == null ? '—' : '$' + (+v).toFixed(+v < 10 ? 3 : 2);
+const pct = v => v == null || !isFinite(v) ? '—' : Math.round(v * 100) + '%';
+const num = v => v == null ? '—' : (+v).toLocaleString('en-US', {maximumFractionDigits: 1});
+const div = (a, b) => b ? a / b : null;
+const tok = v => v == null ? '—' : (+v).toLocaleString('en-US', {notation: 'compact', maximumFractionDigits: 1});
+const tf = new Intl.DateTimeFormat('pt-BR', {timeZone: 'America/Sao_Paulo', dateStyle: 'short', timeStyle: 'medium'});
+const ts = v => v ? tf.format(new Date(v)) : '—';
+const dur = s => s == null ? '—' : s < 60 ? s + 's' : s < 3600 ? Math.round(s / 60) + 'm' : (s / 3600).toFixed(1) + 'h';
+const chip = (t, cls = '') => `<span class="chip ${cls}">${esc(t)}</span>`;
+const LOW = {turns: 20, people: 3}, K_MIN = 5;
+let charts = [];
+
+const DEFS = {
+  wau: 'Distinct people with at least one turn in the last 7 days (independent of the period filter).',
+  penetration: 'Active people in the period ÷ roster (people table, active_from ≤ today). Empty roster ⇒ populate darwinloop_telemetry.people.',
+  clean: 'Clean-turn rate = 1 − friction_b ÷ closed turns. friction_b is behavioural only: user reject, tool failure, fast re-prompt (<60s after no answer / reject / tool fail) or abandoned (no answer, no follow-up in 30 min). Open turns (session active < 30 min) are excluded. Beta.',
+  cpaw: 'Total spend ÷ active people ÷ (period days ÷ 7).',
+  tokens: 'All tokens of every api_request (agent + overhead): input + output + cache read + cache write. Cache reads are cheap, so tokens and $ do not move together.',
+  hourly: 'Cost or tokens of every api_request by hour of day (São Paulo time), summed over the period.',
+  models: 'Cost or tokens split by model, project or skill/command (top 15). Model: every api_request; tokens stacked by type. Project and skill: agent calls of those turns / calls made while the skill was active. $ is the cost Claude reports per call.',
+  edits: 'Accepted ÷ (accepted + rejected) code-edit decisions (Edit/Write/NotebookEdit), from the code_edit_tool.decision metric.',
+  lines: 'Lines added / removed by Claude Code edits (lines_of_code.count metric).',
+  spend: 'Every $ lands in exactly one bucket (they sum to the total). Overhead: small background calls Claude makes on its own (session titles, prompt suggestions), not your work. Cold excess: after a pause of 5+ min the prompt cache has expired, so the next call re-reads the whole context at full price; we count only what it cost above a typical warm call of the same model. Friction: cost of turns that went wrong (you rejected an edit, a tool failed, you re-prompted within 60 s, or the turn was abandoned). Useful: everything else.',
+  funnel: 'Roster → active (≥1 turn) → habitual (≥3 active days) → power (habitual and uses MCP, auto mode or ships commits/PRs).',
+  reach: 'Share of active people who connected an MCP server, used auto permission mode, or created a commit / PR with Claude.',
+  squads: 'Per squad from v_person_day. Squads with fewer than 5 active people are flagged (k-anonymity): compare with care.',
+  trend: 'Daily active people and turns (local day America/Sao_Paulo).',
+  projects: 'Claude Code: git repo name (OTEL_METRICS_INCLUDE_REPOSITORY=true); Cowork and the desktop Code tab without a repo: name of the connected folder. No repo and no folder = outside a project. Sessions before the setup show as outside.',
+  skills: 'Slash commands typed (user_prompt command_name, source builtin/custom/mcp) and skills run by the Skill tool. Cost = API calls made while the skill was active. Custom names need OTEL_LOG_TOOL_DETAILS=1; Cowork skill names need otlpContentCapture toolDetails.',
+  domains: 'Work domain per prompt (desenvolvimento, produto, design, qa) from the keyword heuristic kw-5; a session takes its most frequent domain. Tool: Cowork = service.name cowork, everything else Claude Code. Needs prompt text (OTEL_LOG_USER_PROMPTS=1 / otlpContentCapture), otherwise "untagged".',
+  toolcalls: 'Tool executions (tool_result events) and the share with success=false. Rejected permission prompts are not errors; see 06 Health for the per-tool split.',
+  categories: 'Turn intent from the prompt text heuristic (kw-5). Only for people who opted in to prompt logging; others show as "no text".',
+  people: 'Per person in the period. Cold share = cold agent calls ÷ agent calls.',
+  sessions: 'One row per session. Live = activity in the last 30 min.',
+  turns: 'One row per prompt.id. Flags are empty while the turn is open.',
+  turn: 'Every event of this turn with the per-call cost split. Prompt text kept 30 days, only with OTEL_LOG_USER_PROMPTS=1.',
+  tools: 'Tool calls, failures and permission rejects (user, not policy).',
+  mcp: 'MCP connection attempts. Claude Code does not export server names, so rows are scope × transport.',
+  insights: 'v1 rules: R1 context bloat, R2a MCP tool failing, R2b MCP connections failing, R4 permission friction, R7 cold starts, R9 not activated.',
+};
+
+// ---- state in the URL: #/route/arg?days=28&squad=… ----
+function state() {
+  const [path, q] = location.hash.slice(1).split('?');
+  const [, route = 'overview', ...rest] = (path || '/overview').split('/');
+  return {route, arg: decodeURIComponent(rest.join('/')), q: Object.fromEntries(new URLSearchParams(q || ''))};
+}
+function link(route, arg, extra = {}) {
+  const q = {...state().q, ...extra};
+  Object.keys(q).forEach(k => (q[k] === '' || q[k] == null) && delete q[k]);
+  const qs = new URLSearchParams(q).toString();
+  return '#/' + route + (arg ? '/' + encodeURIComponent(arg) : '') + (qs ? '?' + qs : '');
+}
+
+function periodDays() {
+  const q = state().q;
+  return q.from && q.to ? (new Date(q.to) - new Date(q.from)) / 864e5 : +(q.days || 28);  // same span the server queries
+}
+const SURFACE = {'claude-code': 'cli', 'claude-code-desktop': 'desktop', cowork: 'cowork'};
+const cache = new Map();
+async function api(name, extra = {}) {
+  const q = {days: 28, ...state().q, ...extra};
+  Object.keys(q).forEach(k => (q[k] === '' || q[k] == null) && delete q[k]);
+  if ('days' in extra) { delete q.from; delete q.to; }
+  const url = '/api/' + name + '?' + new URLSearchParams(q);
+  if (!cache.has(url)) cache.set(url, fetch(url).then(async r => {
+    if (r.status === 401) location.href = '/login';
+    if (!r.ok) { cache.delete(url); throw new Error(name + ': ' + r.status + ' ' + (await r.text()).slice(0, 300)); }
+    return r.json();
+  }));
+  return cache.get(url);
+}
+
+const lastResp = {};
+function card(cls, n, title, key, body, resp, extra = '') {
+  if (resp) lastResp[key] = resp;
+  return `<section class="card ${cls}"><h2>${n ? `<b>${n}</b>` : ''}${esc(title)} ${extra}<span class="defw"><button class="def" data-def="${key}" aria-label="definition">i</button>${DEFS[key] ? `<span class="tip" role="tooltip">${esc(DEFS[key])}</span>` : ''}</span></h2>${body}</section>`;
+}
+function openDef(key) {
+  const r = lastResp[key];
+  $('#dbody').innerHTML = `<h3>${esc(key)}</h3><p>${esc(DEFS[key] || '')}</p>` +
+    (r ? `<p class="chip">n = ${r.n}</p><pre>${esc(JSON.stringify(r.params, null, 1))}</pre><pre>${esc(r.sql.trim())}</pre>` : '');
+  $('#drawer').classList.add('open'); $('#close').focus();
+}
+document.addEventListener('click', e => { const b = e.target.closest('[data-def]'); if (b) openDef(b.dataset.def); });
+$('#close').onclick = () => $('#drawer').classList.remove('open');
+document.addEventListener('keydown', e => e.key === 'Escape' && $('#drawer').classList.remove('open'));
+
+function table(cols, rows, empty = 'no data in this period') {
+  if (!rows.length) return `<p class="empty">${empty}</p>`;
+  return `<div class="tw"><table><thead><tr>${cols.map(c => `<th class="${c.n ? 'n' : ''}">${esc(c.h)}</th>`).join('')}</tr></thead><tbody>` +
+    rows.map(r => `<tr class="${r._low ? 'low' : ''}">${cols.map(c => `<td class="${c.n ? 'n' : ''}">${c.f(r)}</td>`).join('')}</tr>`).join('') + '</tbody></table></div>';
+}
+function kpi(cls, n, title, key, v, sub, resp, extra) {
+  return card(`kpi ${cls}`, n, title, key, `<div class="v">${v}</div><div class="sub">${sub || '&nbsp;'}</div>`, resp, extra);
+}
+const lowChip = (turns, people) => (turns < LOW.turns || (people != null && people < LOW.people)) ? chip('low data', 'lowdata') : '';
+
+function spendBar(o) {
+  const parts = [['useful', o.useful, '--primary'], ['friction', o.friction, '--bad'], ['cold excess', o.cold, '--warn'], ['overhead', o.overhead, '--muted']];
+  const tot = o.cost || 0;
+  if (!tot) return '<p class="empty">no spend in this period</p>';
+  return `<div class="spend" role="img" aria-label="${parts.map(p => p[0] + ' ' + pct(p[1] / tot)).join(', ')}">` +
+    parts.map(([l, v, c]) => `<div title="${l} ${usd(v)}" style="width:${100 * (v || 0) / tot}%;background:var(${c})"></div>`).join('') + '</div>' +
+    `<div class="legend">${parts.map(([l, v, c]) => `<span><i style="background:var(${c})"></i>${l} ${usd(v)} · ${pct(v / tot)}</span>`).join('')}<span>total ${usd(tot)}</span></div>` +
+    (o.disablable > 0 ? `<p class="empty">${usd(o.disablable)} of overhead is prompt suggestions, which can be turned off.</p>` : '');
+}
+function lineChart(id, rows) {
+  const el = document.getElementById(id); if (!el || !window.Chart) return;
+  charts.push(new Chart(el, {type: 'line', data: {labels: rows.map(r => r.day), datasets: [
+    {label: 'active people', data: rows.map(r => r.active), borderColor: css('--primary'), yAxisID: 'y'},
+    {label: 'turns', data: rows.map(r => r.turns), borderColor: css('--accent'), yAxisID: 'y1'},
+    {label: 'tool calls', data: rows.map(r => r.tool_calls), borderColor: css('--muted'), yAxisID: 'y1'},
+    {label: 'tool errors', data: rows.map(r => r.tool_fails), borderColor: css('--bad'), yAxisID: 'y1'}]},
+    options: {maintainAspectRatio: false, plugins: {legend: {labels: {color: css('--muted'), font: {family: 'JetBrains Mono', size: 11}}}},
+      scales: {x: {ticks: {color: css('--muted')}, grid: {color: css('--border')}},
+        y: {beginAtZero: true, ticks: {color: css('--muted'), precision: 0}, grid: {color: css('--border')}},
+        y1: {beginAtZero: true, position: 'right', ticks: {color: css('--muted'), precision: 0}, grid: {display: false}}}}}));
+}
+// One chart for every split; by = model | project | skill, metric = cost | tokens (model tokens stacked by type).
+function splitChart(data) {
+  const by = $('#sp-by'), metric = $('#sp-metric'); if (!by || !window.Chart) return;
+  let chart;
+  const draw = () => {
+    if (chart) { chart.destroy(); charts = charts.filter(c => c !== chart); }
+    const m = metric.value, fmt = m === 'cost' ? usd : tok;
+    const rows = (data[by.value] || []).map(r => ({...r, label: by.value === 'model' ? r.model
+      : by.value === 'project' ? `${r.project} · ${r.tool}` : `${r.kind} ${r.name} · ${r.tool}`})).sort((a, b) => (b[m] || 0) - (a[m] || 0)).slice(0, 15);
+    const datasets = m === 'tokens' && by.value === 'model'
+      ? [['input', 'input_tokens', '--primary'], ['output', 'output_tokens', '--accent'], ['cache read', 'cache_read_tokens', '--muted'],
+         ['cache write', 'cache_creation_tokens', '--warn']].map(([label, k, c]) => ({label, data: rows.map(r => r[k]), backgroundColor: css(c)}))
+      : [{label: m, data: rows.map(r => r[m]), backgroundColor: css('--primary')}];
+    const stacked = datasets.length > 1, tick = {color: css('--muted')};
+    chart = new Chart($('#c-split'), {type: 'bar', data: {labels: rows.map(r => r.label), datasets}, options: {indexAxis: 'y', maintainAspectRatio: false,
+      plugins: {legend: {display: stacked, labels: {color: css('--muted'), font: {family: 'JetBrains Mono', size: 11}}},
+        tooltip: {callbacks: {label: c => `${c.dataset.label}: ${fmt(c.raw)}`}}},
+      scales: {x: {stacked, beginAtZero: true, ticks: {...tick, callback: fmt}, grid: {color: css('--border')}}, y: {stacked, ticks: tick, grid: {display: false}}}}});
+    charts.push(chart);
+  };
+  by.onchange = metric.onchange = draw; draw();
+}
+// Vertical bars for all 24 hours (São Paulo time), so quiet hours show as gaps.
+function hourChart(rows) {
+  const metric = $('#hr-metric'); if (!metric || !window.Chart) return;
+  const by = Object.fromEntries(rows.map(r => [r.hour, r])), hours = [...Array(24).keys()];
+  let chart;
+  const draw = () => {
+    if (chart) { chart.destroy(); charts = charts.filter(c => c !== chart); }
+    const m = metric.value, fmt = m === 'cost' ? usd : tok, tick = {color: css('--muted')};
+    chart = new Chart($('#c-hour'), {type: 'bar', data: {labels: hours.map(h => String(h).padStart(2, '0') + 'h'),
+      datasets: [{label: m, data: hours.map(h => by[h]?.[m] || 0), backgroundColor: css('--primary')}]},
+      options: {maintainAspectRatio: false, plugins: {legend: {display: false}, tooltip: {callbacks: {label: c => fmt(c.raw)}}},
+        scales: {y: {beginAtZero: true, ticks: {...tick, callback: fmt}, grid: {color: css('--border')}}, x: {ticks: tick, grid: {display: false}}}}});
+    charts.push(chart);
+  };
+  metric.onchange = draw; draw();
+}
+const flags = t => [t.flag_user_reject && chip('reject', 'bad'), t.flag_tool_fail && chip('tool fail', 'bad'),
+  t.flag_fast_reprompt && chip('fast re-prompt', 'bad'), t.flag_abandoned && chip('abandoned', 'bad'),
+  t.next_correction_kw && chip('corrected (text)', 'beta'), t.has_cold && chip('cold', 'beta'),
+  t.turn_state === 'open' && chip('open')].filter(Boolean).join(' ') || (t.turn_state === 'closed' ? chip('clean', 'ok') : '');
+
+// ---- pages ----
+async function overview(scope) {
+  const [o, tr, sq, cat, ins, dom, prj, sk, md, hr] = await Promise.all([api('overview'), api('trend'), api('squads'), api('categories'), api('insights'), api('domains'), api('projects'), api('skills'), api('models'), api('hourly')]);
+  const r = o.rows[0] || {}, days = periodDays();
+  const clean = 1 - div(r.friction_b, r.closed_turns), low = lowChip(r.closed_turns, r.active);
+  let h = `<h1><b>${scope ? '03' : '01'}</b>${esc(scope || 'Overview')}</h1>`;
+  h += kpi('s3', '', 'Weekly active', 'wau', num(r.wau), r.roster ? `of ${r.roster} in roster` : 'roster empty', o);
+  h += kpi('s3', '', 'Penetration', 'penetration', r.roster ? pct(div(r.active, r.roster)) : '—', `${num(r.active)} active in ${days}d`, o);
+  h += kpi(`s3 ${low ? 'low' : ''}`, '', 'Clean-turn rate', 'clean', pct(r.closed_turns ? clean : null), `${num(r.friction_b)} friction / ${num(r.closed_turns)} closed`, o, chip('beta', 'beta') + low);
+  h += kpi(`s3 ${low ? 'low' : ''}`, '', '$ / active / week', 'cpaw', usd(div(r.cost, (r.active || 0) * days / 7)), `${usd(r.cost)} total`, o, low);
+  h += kpi('s3', '', 'Tokens', 'tokens', tok(r.tokens), `${tok(r.input_tokens)} in · ${tok(r.output_tokens)} out · ${tok(div(r.tokens, r.turns))}/turn`, o);
+  h += kpi(`s3 ${low ? 'low' : ''}`, '', 'Tokens / active / week', 'tokens', tok(div(r.tokens, (r.active || 0) * days / 7)), `${usd(div(r.cost, r.tokens) * 1e6)} per 1M tokens`, o, low);
+  h += kpi('s3', '', 'Edit acceptance', 'edits', pct(div(r.edits_accept, r.edits_accept + r.edits_reject)), `${num(r.edits_accept)} accepted`, o);
+  h += kpi('s3', '', 'Lines added', 'lines', num(r.lines_added), `${num(r.lines_removed)} removed · ${num(r.commits)} commits · ${num(r.prs)} PRs`, o);
+  h += kpi('s3', '', 'Turns', 'turns', num(r.turns), `${num(r.sessions)} sessions`, o);
+  h += kpi('s3', '', 'Tool calls', 'toolcalls', `<a href="${link('health')}">${num(r.tool_calls)}</a>`, `${num(div(r.tool_calls, r.turns))} per turn`, o);
+  h += kpi(`s3 ${div(r.tool_fails, r.tool_calls) > 0.1 ? 'low' : ''}`, '', 'Tool error rate', 'toolcalls', pct(div(r.tool_fails, r.tool_calls)), `${num(r.tool_fails)} failed · by tool in 06 Health`, o);
+  h += kpi('s3', '', 'Cold share', 'spend', pct(div(r.cold_calls, r.agent_calls)), `${num(r.cold_calls)} of ${num(r.agent_calls)} agent calls`, o);
+  h += card('s8', '1.8', 'Where spend goes', 'spend', spendBar(r), o);
+  const fun = [['roster', r.roster], ['active', r.active], ['habitual', r.habitual], ['power', r.power]], top = Math.max(...fun.map(f => f[1] || 0), 1);
+  h += card('s4', '1.14', 'Adoption funnel', 'funnel', `<div class="funnel">${fun.map(([l, v]) => `<div><span>${l}</span><span class="b" style="width:${100 * (v || 0) / top}%"></span><em>${num(v)}</em></div>`).join('')}</div>`, o);
+  h += card('s8', '1.4', 'Depth over time', 'trend', tr.rows.length ? '<canvas id="c-trend"></canvas>' : '<p class="empty">no activity</p>', tr);
+  h += card('s6', '1.10', 'Breakdown', 'models', `<div class="bar" style="padding:0 0 8px;border:0"><label>by <select id="sp-by"><option value="model">model</option><option value="project">project</option><option value="skill">skill / command</option></select></label>
+    <label>show <select id="sp-metric"><option value="cost">cost</option><option value="tokens">tokens</option></select></label></div><canvas id="c-split"></canvas>`, md);
+  h += card('s6', '1.11', 'By hour of day', 'hourly', `<div class="bar" style="padding:0 0 8px;border:0"><label>show <select id="hr-metric"><option value="cost">cost</option><option value="tokens">tokens</option></select></label></div><canvas id="c-hour"></canvas>`, hr);
+  h += card('s4', '1.4b', 'Reach', 'reach', table([{h: 'capability', f: x => x.l}, {h: 'people', n: 1, f: x => num(x.v)}, {h: 'share', n: 1, f: x => pct(div(x.v, r.active))}],
+    [{l: 'MCP servers', v: r.reach_mcp}, {l: 'auto mode', v: r.reach_auto}, {l: 'commit / PR', v: r.reach_ship}]), o);
+  if (!scope) h += card('s8', '1.3', 'Adoption by squad', 'squads', squadTable(sq.rows, days), sq);
+  h += card(scope ? 's8' : 's4', '1.5', 'What people ask for', 'categories', table([{h: 'intent', f: x => esc(x.category)}, {h: 'turns', n: 1, f: x => num(x.turns)},
+    {h: 'clean', n: 1, f: x => pct(x.closed_turns ? 1 - div(x.friction_b, x.closed_turns) : null)}, {h: 'tokens', n: 1, f: x => tok(x.tokens)}, {h: 'cost', n: 1, f: x => usd(x.cost)}], cat.rows), cat, chip('beta', 'beta'));
+  h += card('s8', '1.6', 'Tool × domain', 'domains', table([{h: 'tool', f: x => esc(x.tool)}, {h: 'domain', f: x => esc(x.domain)},
+    {h: 'sessions', n: 1, f: x => num(x.sessions)}, {h: 'turns', n: 1, f: x => num(x.turns)},
+    {h: 'clean', n: 1, f: x => pct(x.closed_turns ? 1 - div(x.friction_b, x.closed_turns) : null)}, {h: 'tokens', n: 1, f: x => tok(x.tokens)}, {h: 'cost', n: 1, f: x => usd(x.cost)}], dom.rows), dom, chip('beta', 'beta'));
+  const inP = prj.rows.filter(x => x.in_project).reduce((s, x) => s + x.sessions, 0), allP = prj.rows.reduce((s, x) => s + x.sessions, 0);
+  h += card('s6', '1.7', 'Projects', 'projects', `<p>${pct(div(inP, allP))} of sessions inside a project</p>` + table([{h: 'tool', f: x => esc(x.tool)},
+    {h: 'project', f: x => x.in_project ? esc(x.project) : `<em>${esc(x.project)}</em>`}, {h: 'sessions', n: 1, f: x => num(x.sessions)},
+    {h: 'people', n: 1, f: x => num(x.people)}, {h: 'turns', n: 1, f: x => num(x.turns)}, {h: 'tokens', n: 1, f: x => tok(x.tokens)}, {h: 'cost', n: 1, f: x => usd(x.cost)}], prj.rows), prj);
+  h += card('s6', '1.7b', 'Skills & commands', 'skills', table([{h: 'tool', f: x => esc(x.tool)}, {h: 'kind', f: x => chip(x.kind)},
+    {h: 'name', f: x => esc(x.name) + (x.source ? ' ' + chip(x.source) : '')}, {h: 'uses', n: 1, f: x => num(x.uses)},
+    {h: 'people', n: 1, f: x => num(x.people)}, {h: 'tokens', n: 1, f: x => tok(x.tokens)}, {h: 'cost', n: 1, f: x => usd(x.cost)}], sk.rows), sk);
+  h += card(scope ? 's4' : 's12', '1.9', 'Top actions', 'insights', insightList(ins.rows.slice(0, 3)) + `<p><a href="${link('insights')}">all insights →</a></p>`, ins);
+  return [h, () => { lineChart('c-trend', tr.rows); splitChart({model: md.rows, project: prj.rows, skill: sk.rows}); hourChart(hr.rows); }];
+}
+
+function squadTable(rows, days) {
+  return table([{h: 'squad', f: s => `<a href="${link('squad', s.squad, {squad: s.squad})}">${esc(s.squad)}</a>` + (s.active < K_MIN ? ' ' + chip('k<5', 'lowdata') : '')},
+    {h: 'active / roster', n: 1, f: s => `${num(s.active)} / ${s.roster ?? '—'}`},
+    {h: 'penetration', n: 1, f: s => pct(div(s.active, s.roster))},
+    {h: 'clean', n: 1, f: s => pct(s.closed_turns ? 1 - div(s.friction_b, s.closed_turns) : null)},
+    {h: '$/active/wk', n: 1, f: s => usd(div(s.cost, s.active * days / 7))},
+    {h: 'friction $', n: 1, f: s => usd(s.friction)}, {h: 'cold share', n: 1, f: s => pct(div(s.cold_calls, s.agent_calls))},
+    {h: 'tokens', n: 1, f: s => tok(s.tokens)}, {h: 'lines', n: 1, f: s => num(s.lines_added)}], rows.map(s => ({...s, _low: s.active < K_MIN})));
+}
+function insightList(rows) {
+  if (!rows.length) return '<p class="empty">no rule fired in this period</p>';
+  return rows.map(i => `<div class="ins"><b>${esc(i.rule)}</b>${esc(i.title)} · ` +
+    (i.user_email ? `<a href="${link('person', i.user_email, {email: i.user_email})}">${esc(i.subject)}</a>` : esc(i.subject)) +
+    ` <span class="chip">${i.metric == null ? '' : i.metric < 1.0001 && i.rule !== 'R1' ? pct(i.metric) : num(i.metric)}${i.n ? ' · n=' + i.n : ''}</span><div>${esc(i.action)}</div></div>`).join('');
+}
+
+async function squadsPage() {
+  const sq = await api('squads'), days = periodDays();
+  return [`<h1><b>02</b>Squads</h1>` + card('', '', 'Squads', 'squads', squadTable(sq.rows, days), sq)];
+}
+async function squadPage(name) {
+  const [o, people] = await overview('Squad · ' + name).then(async x => [x, await api('people')]);
+  return [o[0] + card('', '', 'People', 'people', peopleTable(people.rows), people), o[1]];
+}
+function peopleTable(rows) {
+  return table([{h: 'person', f: p => `<a href="${link('person', p.user_email, {email: p.user_email})}">${esc(p.person)}</a>`},
+    {h: 'squad', f: p => esc(p.squad)}, {h: 'days', n: 1, f: p => num(p.days_active)}, {h: 'last', f: p => esc(p.last_day)},
+    {h: 'sessions', n: 1, f: p => num(p.sessions)}, {h: 'turns', n: 1, f: p => num(p.turns)},
+    {h: 'clean', n: 1, f: p => pct(p.closed_turns ? 1 - div(p.friction_b, p.closed_turns) : null)},
+    {h: 'cost', n: 1, f: p => usd(p.cost)}, {h: 'friction $', n: 1, f: p => usd(p.friction)},
+    {h: 'cold share', n: 1, f: p => pct(div(p.cold_calls, p.agent_calls))}, {h: 'lines', n: 1, f: p => num(p.lines_added)},
+    {h: 'uses', f: p => [p.uses_mcp && chip('mcp'), p.uses_auto && chip('auto')].filter(Boolean).join(' ')}], rows);
+}
+async function personPage(email) {
+  const [o, s] = await Promise.all([overview('Person · ' + email), api('sessions', {email})]);
+  return [o[0] + card('', '04', 'Sessions', 'sessions', sessionsTable(s.rows), s), o[1]];
+}
+function sessionsTable(rows) {
+  return table([{h: 'start', f: s => `<a href="${link('session', s.session_id, {session: s.session_id, email: s.user_email})}">${ts(s.start_ts)}</a>` + (s.is_live ? ' ' + chip('live', 'ok') : '')},
+    {h: 'person', f: s => esc(s.person)}, {h: 'surface', f: s => esc(SURFACE[s.surface] || s.surface)}, {h: 'domain', f: s => esc(s.domain || '—')},
+    {h: 'duration', n: 1, f: s => dur(s.duration_s)}, {h: 'turns', n: 1, f: s => num(s.n_turns)},
+    {h: 'friction', n: 1, f: s => num(s.n_friction_b)}, {h: 'cache hit', n: 1, f: s => pct(s.cache_hit)},
+    {h: 'cost', n: 1, f: s => usd(s.cost_usd)}, {h: 'cold $', n: 1, f: s => usd(s.cold_excess)}, {h: 'friction $', n: 1, f: s => usd(s.friction_cost)},
+    {h: 'models', f: s => esc((s.models || []).join(', '))}], rows);
+}
+async function sessionPage(id) {
+  const [s, t] = await Promise.all([api('sessions', {session: id, email: ''}), api('session_turns', {session: id})]);
+  const r = s.rows[0];
+  if (!r) return [`<h1><b>04</b>Session</h1><p class="empty">session not found in this period</p>`];
+  let h = `<h1><b>04</b>Session · ${esc(r.person)} · ${ts(r.start_ts)}</h1>`;
+  h += kpi('s3', '', 'Turns', 'sessions', num(r.n_turns), `${num(r.n_friction_b)} with friction`, s);
+  h += kpi('s3', '', 'Duration', 'sessions', dur(r.duration_s), esc(r.surface), s);
+  h += kpi('s3', '', 'Cost', 'spend', usd(r.cost_usd), `cold ${usd(r.cold_excess)} · friction ${usd(r.friction_cost)} · overhead ${usd(r.overhead_cost)}`, s);
+  h += kpi('s3', '', 'Cache hit', 'sessions', pct(r.cache_hit), `${num(r.tokens)} tokens`, s);
+  h += card('', '05', 'Turns', 'turns', table([{h: '#', n: 1, f: t => num(t.turn_no)},
+    {h: 'start', f: t => `<a href="${link('turn', t.prompt_id)}">${ts(t.start_ts)}</a>`},
+    {h: 'intent', f: t => esc(t.category || '—')}, {h: 'domain', f: t => esc(t.domain || '—')}, {h: 'calls', n: 1, f: t => num(t.n_agent_calls)}, {h: 'tools', n: 1, f: t => num(t.n_tool_calls)},
+    {h: 'next in', n: 1, f: t => dur(t.next_gap_s)}, {h: 'cost', n: 1, f: t => usd(t.agent_cost)}, {h: 'flags', f: flags}], t.rows), t);
+  return [h];
+}
+async function turnPage(id) {
+  const [t, e] = await Promise.all([api('turn', {prompt: id}), api('turn_events', {prompt: id})]);
+  const r = t.rows[0];
+  if (!r) return [`<h1><b>05</b>Turn</h1><p class="empty">turn not found</p>`];
+  turnCtx = r;
+  let h = `<h1><b>05</b>Turn ${num(r.turn_no)} · ${esc(r.person)} · ${ts(r.start_ts)}</h1>`;
+  h += card('s8', '', 'Prompt', 'turn', r.prompt_text ? `<div class="prompt">${esc(r.prompt_text)}</div>` :
+    `<p class="empty">no text: not opted in, redacted or past 30-day retention · ${num(r.prompt_length)} chars</p>`, t);
+  h += card('s4', '', 'Assessment', 'clean', `<p>${flags(r)}</p><div class="sub empty">intent ${esc(r.category || '—')} · domain ${esc(r.domain || '—')} · tone ${esc(r.tone || '—')}` +
+    ` · next prompt in ${dur(r.next_gap_s)}${r.fast_reprompt_reason ? ' · reason ' + esc(r.fast_reprompt_reason) : ''}</div>` +
+    `<p class="empty">agent ${usd(r.agent_cost)} · overhead ${usd(r.overhead_cost)} · ${num(r.cache_read_tokens)} cache-read tokens</p>`, t);
+  h += card('', '', 'Timeline', 'turn', table([{h: 'time', f: x => ts(x.ts)},
+    {h: 'event', f: x => esc(x.event_name) + (x.is_aux ? ' ' + chip('aux') : '')},
+    {h: 'detail', f: x => esc([x.tool_name, x.decision, x.source, x.success === 'false' ? 'failed' : '', x.model, x.query_source, x.error].filter(Boolean).join(' · '))},
+    {h: 'ms', n: 1, f: x => num(x.duration_ms)}, {h: 'cost', n: 1, f: x => x.cost_usd == null ? '' : usd(x.cost_usd)},
+    {h: 'split', f: x => x.cost_usd == null ? '' : [x.overhead > 0 && 'overhead', x.cold_excess > 0 && `cold ${usd(x.cold_excess)} (${esc(x.cold_reason)})`,
+      x.friction > 0 && `friction ${usd(x.friction)}`, x.useful > 0 && 'useful'].filter(Boolean).join(' · ')},
+    {h: 'cache read', n: 1, f: x => x.cache_read_tokens == null ? '' : num(x.cache_read_tokens)}], e.rows), e);
+  return [h];
+}
+async function listPage(kind) {
+  if (kind === 'sessions') { const s = await api('sessions'); return [`<h1><b>04</b>Sessions</h1>` + card('', '', 'Sessions', 'sessions', sessionsTable(s.rows), s)]; }
+  const t = await api('turns'), only = state().q.friction === '1';
+  const rows = only ? t.rows.filter(x => x.is_friction_b) : t.rows;
+  return [`<h1><b>05</b>Turns</h1>` + card('', '', 'Turns', 'turns', `<p><a href="${link('turns', '', {friction: only ? '' : '1'})}">${only ? 'show all' : 'only friction'}</a></p>` +
+    table([{h: 'start', f: x => `<a href="${link('turn', x.prompt_id)}">${ts(x.start_ts)}</a>`}, {h: 'person', f: x => esc(x.person)},
+      {h: 'intent', f: x => esc(x.category || '—')}, {h: 'domain', f: x => esc(x.domain || '—')}, {h: 'model', f: x => esc(x.main_model || '—')}, {h: 'calls', n: 1, f: x => num(x.n_agent_calls)},
+      {h: 'cost', n: 1, f: x => usd(x.agent_cost)}, {h: 'flags', f: flags}], rows), t)];
+}
+async function healthPage() {
+  const [t, m] = await Promise.all([api('tools'), api('mcp')]);
+  return [`<h1><b>06</b>Health</h1>` + card('s6', '', 'Tools', 'tools', table([{h: 'tool', f: x => esc(x.tool) + (x.is_mcp ? ' ' + chip('mcp') : '')},
+    {h: 'calls', n: 1, f: x => num(x.calls)}, {h: 'fail', n: 1, f: x => pct(div(x.fails, x.calls))},
+    {h: 'rejected', n: 1, f: x => pct(div(x.user_rejects, x.decisions))}, {h: 'p50 ms', n: 1, f: x => num(x.p50_ms)}],
+    t.rows.map(x => ({...x, _low: x.calls < 5}))), t) +
+    card('s6', '', 'MCP connections', 'mcp', table([{h: 'scope', f: x => esc(x.scope || '—')}, {h: 'transport', f: x => esc(x.transport)},
+      {h: 'attempts', n: 1, f: x => num(x.attempts)}, {h: 'failed', n: 1, f: x => `${pct(div(x.failures, x.attempts))}` + (x.failures > x.attempts / 2 ? ' ' + chip('failing', 'bad') : '')},
+      {h: 'people', n: 1, f: x => num(x.people)}, {h: 'errors', f: x => esc((x.error_codes || []).join(', '))}], m.rows), m)];
+}
+async function insightsPage() {
+  const i = await api('insights');
+  return [`<h1><b>07</b>Insights</h1>` + card('', '', 'Rules that fired', 'insights', insightList(i.rows), i, chip('beta', 'beta'))];
+}
+
+// ---- frame ----
+let turnCtx = null;
+const NAV = [['overview', '01', 'Overview'], ['squads', '02', 'Squads'], ['sessions', '04', 'Sessions'], ['turns', '05', 'Turns'], ['health', '06', 'Health'], ['insights', '07', 'Insights']];
+function crumbs() {
+  const {route, arg, q} = state(), c = [`<a href="${link('overview', '', {squad: '', email: '', session: ''})}">Org</a>`];
+  const squad = q.squad, email = q.email || (route === 'turn' && turnCtx?.user_email), sess = q.session || (route === 'turn' && turnCtx?.session_id);
+  if (squad) c.push(`<a href="${link('squad', squad, {email: '', session: ''})}">${esc(squad)}</a>`);
+  if (email) c.push(`<a href="${link('person', email, {email, session: ''})}">${esc(email)}</a>`);
+  if (sess && ['session', 'turn'].includes(route)) c.push(`<a href="${link('session', sess, {session: sess})}">session ${esc(String(sess).slice(0, 8))}</a>`);
+  if (route === 'turn') c.push(`<span>turn ${esc(arg.slice(0, 8))}</span>`);
+  $('#crumbs').innerHTML = c.join('<i>/</i>');
+}
+async function render() {
+  const {route, arg, q} = state();
+  $('#nav').innerHTML = NAV.map(([r, n, l]) => `<a class="${r === route ? 'on' : ''}" href="${link(r)}"><b>${n}</b> ${l}</a>`).join('');
+  for (const k of ['days', 'squad', 'surface', 'model']) $('#f-' + k).value = q[k] || (k === 'days' ? '28' : '');
+  const custom = !!(q.from && q.to); $('#f-range').hidden = !custom;
+  if (custom) { $('#f-days').value = 'custom'; $('#f-from').value = q.from; $('#f-to').value = q.to; }
+  charts.forEach(c => c.destroy()); charts = [];
+  if (route !== 'turn') turnCtx = null;
+  crumbs();
+  $('#main').innerHTML = '<p class="empty">loading…</p>';
+  try {
+    const pages = {overview: () => overview(), squads: squadsPage, squad: () => squadPage(arg), person: () => personPage(arg),
+      session: () => sessionPage(arg), turn: () => turnPage(arg), turns: () => listPage('turns'), sessions: () => listPage('sessions'),
+      health: healthPage, insights: insightsPage};
+    const [html, after] = await (pages[route] || pages.overview)();
+    $('#main').innerHTML = html; after && after(); crumbs();
+  } catch (e) { $('#main').innerHTML = `<p class="err">${esc(e.message)}</p>`; }
+}
+function setRange() {
+  const f = $('#f-from').value, t = $('#f-to').value;
+  if (f && t && f <= t) { const {route, arg} = state(); location.hash = link(route, arg, {from: f, to: t, days: ''}); }
+}
+$('#f-from').onchange = $('#f-to').onchange = setRange;
+for (const k of ['squad', 'surface', 'model'])
+  $('#f-' + k).onchange = e => { const {route, arg} = state(); location.hash = link(k === 'squad' && route === 'squad' ? 'squad' : route, k === 'squad' && route === 'squad' ? e.target.value : arg, {[k]: e.target.value}); };
+async function fillFilters() {
+  try {
+    const [sq, t] = await Promise.all([api('squads', {days: 90, squad: '', email: ''}), api('turns', {days: 90, model: '', squad: '', email: ''})]);
+    const opt = (sel, vals) => { const cur = sel.value; vals.forEach(v => sel.add(new Option(v, v))); sel.value = cur; };
+    opt($('#f-squad'), sq.rows.map(r => r.squad));
+    opt($('#f-model'), [...new Set(t.rows.map(r => r.main_model).filter(Boolean))]);
+    const q = state().q; $('#f-squad').value = q.squad || ''; $('#f-model').value = q.model || '';
+  } catch (e) { /* filters stay at "all" */ }
+}
+$('#f-days').onchange = e => {
+  if (e.target.value === 'custom') { $('#f-range').hidden = false; $('#f-to').value ||= new Date().toISOString().slice(0, 10); return $('#f-from').focus(); }
+  const {route, arg} = state(); location.hash = link(route, arg, {days: e.target.value, from: '', to: ''});
+};
+window.addEventListener('hashchange', render);
+fillFilters(); render();
+</script>
+</body>
+</html>
